@@ -35,12 +35,12 @@
 
     // 对话文本（中英文）
     const GREETINGS = {
-        zh: ['嘿嘿，欢迎常来逛～', '今天也要元气满满哦！', '搜一搜，可能有惊喜～', '我每天都在这里等你呢'],
-        en: ['Hehe, happy browsing!', 'Stay energized today!', 'Try searching!', 'I\'ll be right here']
+        zh: ['嘿嘿，欢迎常来逛～', '今天也要元气满满哦！', '看一看，可能有惊喜～', '我每天都在这里等你呢'],
+        en: ['Hehe, happy browsing!', 'Stay energized today!', 'Take a look, there might be a surprise!', 'I\'ll be right here']
     };
 
     const FEED_REPLIES = {
-        zh: ['谢谢投喂小鱼干！', '小鱼干真好吃～', '吃饱了继续帮你看店！'],
+        zh: ['谢谢投喂小鱼干！', '小鱼干真好吃～', '吃饱了继续和你玩！'],
         en: ['Thanks for the fish!', 'Yum, dried fish!', 'Fully charged now!']
     };
 
@@ -102,13 +102,13 @@
         return window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
     }
 
-    // ----- 精灵组件 -----
     function Sprite({ state, frame, layer }) {
         const config = SPRITE_CONFIG[state];
         const hasMotion = layer === 'depth' || !config.motion;
         const className = `kanban-girl-sprite${!hasMotion ? ` is-${config.motion}` : ''}${layer === 'depth' ? ' kanban-girl-depth' : ''}`;
         const frames = config.frames;
-        const position = frames > 1 ? (frame / (frames - 1)) * 100 : 0;
+        const safeFrame = Math.min(frame, frames - 1);
+        const position = frames > 1 ? (safeFrame / (frames - 1)) * 100 : 0;
 
         return React.createElement('div', {
             className: className,
@@ -201,34 +201,27 @@
             const maxX = Math.max(0, window.innerWidth - size - EDGE_PADDING);
             const minX = EDGE_PADDING;
             
-            // 随机方向
             const dir = Math.random() < 0.5 ? 1 : -1;
             
-            // 计算目标位置
             let targetX;
             if (dir === 1) {
-                // 向右走
                 targetX = Math.random() < 0.3 ? 
-                    minX + Math.random() * (maxX * 0.3) :  // 短距离
-                    minX + Math.random() * (maxX * 0.6) + maxX * 0.2;  // 长距离
+                    minX + Math.random() * (maxX * 0.3) :
+                    minX + Math.random() * (maxX * 0.6) + maxX * 0.2;
             } else {
-                // 向左走
                 targetX = Math.random() < 0.3 ?
                     maxX - Math.random() * (maxX * 0.3) :
                     maxX - Math.random() * (maxX * 0.6) - maxX * 0.2;
             }
             
-            // 限制在边界内
             targetX = clamp(targetX, minX, maxX);
             
             const distance = Math.abs(targetX - rect.left);
             if (distance < WALK_MIN_DIST) {
-                // 距离太近，重新走
                 setTimeout(startWalking, 100);
                 return;
             }
 
-            // 根据移动方向设置翻转
             setFlip(targetX > rect.left ? -1 : 1);
             setState('walk');
             
@@ -250,10 +243,8 @@
                 ws.progress += WALK_SPEED * delta / 1000;
 
                 if (ws.progress >= ws.distance) {
-                    // 到达目标
                     stopWalking();
                     setState('idle');
-                    // 精确对齐到目标位置
                     const finalX = ws.target;
                     const finalY = ws.y;
                     setPosition({ x: finalX, y: finalY });
@@ -261,7 +252,6 @@
                     return;
                 }
 
-                // 当前位置 = 起始位置 + 进度 * 方向
                 const progressRatio = ws.progress / ws.distance;
                 const currentX = ws.from + (ws.target - ws.from) * progressRatio;
                 setPosition({ x: currentX, y: ws.y });
@@ -422,7 +412,7 @@
             }
         }
 
-        // ----- Effects -----
+        // ----- 效果 -----
         useEffect(() => {
             const config = SPRITE_CONFIG[state];
             if (reducedMotion.current) {
@@ -550,7 +540,6 @@
             className: 'kanban-girl-root',
             style: style
         }, [
-            // 气泡和菜单 - 使用底部对齐
             React.createElement('div', { key: 'pop', className: 'kanban-girl-pop' },
                 bubble && React.createElement('p', {
                     className: 'kanban-girl-bubble',
