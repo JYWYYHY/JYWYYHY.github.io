@@ -19,7 +19,7 @@
     const DRAG_THRESHOLD = 6;
 
     // 精灵配置
-    const SPRITE_BASE = 'kanban-girl/whale-girl/'; // ⚠️ 根据你的图片路径调整
+    const SPRITE_BASE = 'kanban-girl/whale-girl/';
     const SPRITE_CONFIG = {
         idle: { sheet: 'idle.png', frames: 3, fps: 2, playback: 'blink' },
         joy: { sheet: 'joy.png', frames: 2, fps: 5, playback: 'loop' },
@@ -197,23 +197,46 @@
             if (!el || walkState.current || animFrame.current) return;
 
             const rect = el.getBoundingClientRect();
-            const w = rect.width;
-            const maxX = Math.max(0, window.innerWidth - w - EDGE_PADDING);
+            const size = rect.width;
+            const maxX = Math.max(0, window.innerWidth - size - EDGE_PADDING);
             const minX = EDGE_PADDING;
+            
+            // 随机方向
             const dir = Math.random() < 0.5 ? 1 : -1;
-            const targetX = dir === 1 ? minX + Math.random() * (maxX * 0.6) : maxX - Math.random() * (maxX * 0.6);
+            
+            // 计算目标位置
+            let targetX;
+            if (dir === 1) {
+                // 向右走
+                targetX = Math.random() < 0.3 ? 
+                    minX + Math.random() * (maxX * 0.3) :  // 短距离
+                    minX + Math.random() * (maxX * 0.6) + maxX * 0.2;  // 长距离
+            } else {
+                // 向左走
+                targetX = Math.random() < 0.3 ?
+                    maxX - Math.random() * (maxX * 0.3) :
+                    maxX - Math.random() * (maxX * 0.6) - maxX * 0.2;
+            }
+            
+            // 限制在边界内
+            targetX = clamp(targetX, minX, maxX);
+            
             const distance = Math.abs(targetX - rect.left);
+            if (distance < WALK_MIN_DIST) {
+                // 距离太近，重新走
+                setTimeout(startWalking, 100);
+                return;
+            }
 
-            if (distance < WALK_MIN_DIST) return;
-
-            setFlip(dir);
+            // 根据移动方向设置翻转
+            setFlip(targetX > rect.left ? -1 : 1);
             setState('walk');
+            
             walkState.current = {
                 from: rect.left,
                 target: targetX,
                 y: rect.top,
                 distance: distance,
-                dir: dir,
                 progress: 0,
                 last: performance.now()
             };
@@ -221,22 +244,27 @@
             function animate(now) {
                 const ws = walkState.current;
                 if (!ws) return;
+                
                 const delta = Math.min(50, now - ws.last);
                 ws.last = now;
                 ws.progress += WALK_SPEED * delta / 1000;
 
                 if (ws.progress >= ws.distance) {
+                    // 到达目标
                     stopWalking();
                     setState('idle');
-                    const x = ws.target;
-                    const y = ws.y;
-                    setPosition({ x, y });
-                    savePos(x, y);
+                    // 精确对齐到目标位置
+                    const finalX = ws.target;
+                    const finalY = ws.y;
+                    setPosition({ x: finalX, y: finalY });
+                    savePos(finalX, finalY);
                     return;
                 }
 
-                const pos = ws.dir === 1 ? ws.from + ws.progress : ws.from - ws.progress;
-                setPosition({ x: pos, y: ws.y });
+                // 当前位置 = 起始位置 + 进度 * 方向
+                const progressRatio = ws.progress / ws.distance;
+                const currentX = ws.from + (ws.target - ws.from) * progressRatio;
+                setPosition({ x: currentX, y: ws.y });
                 animFrame.current = requestAnimationFrame(animate);
             }
 
@@ -301,17 +329,20 @@
         function handlePointerDown(e) {
             const el = buttonRef.current;
             if (!el) return;
+            
             const rect = el.getBoundingClientRect();
             dragData.current = {
                 pointerId: e.pointerId,
                 startX: e.clientX,
                 startY: e.clientY,
-                baseX: rect.left,
-                baseY: rect.top,
+                currentX: rect.left,
+                currentY: rect.top,
                 moved: false
             };
+            
             try { el.setPointerCapture(e.pointerId) } catch {}
             el.classList.add('is-dragging');
+            
             if (stateRef.current === 'sleep') {
                 runStateSequence([['wake', 1200]]);
             }
@@ -325,26 +356,36 @@
 
             const dx = e.clientX - data.startX;
             const dy = e.clientY - data.startY;
+            
             if (!data.moved && Math.hypot(dx, dy) < DRAG_THRESHOLD) return;
 
             data.moved = true;
+            
             stateTimers.current.forEach(t => clearTimeout(t));
             stateTimers.current = [];
             setState('drag');
 
-            const newX = clamp(data.baseX + dx, 0, Math.max(0, window.innerWidth - 120));
-            const newY = clamp(data.baseY + dy, 0, Math.max(0, window.innerHeight - 120));
-            setPosition({ x: newX, y: newY });
+            const newX = data.currentX + dx;
+            const newY = data.currentY + dy;
 
-            // 倾斜效果
-            const el = buttonRef.current;
-            if (el) {
-                const ratioX = (e.clientX - data.baseX) / 120 - 0.5;
-                const ratioY = (e.clientY - data.baseY) / 120 - 0.5;
-                const tiltX = (-ratioY * 2 * TILT_AMOUNT).toFixed(2);
-                const tiltY = (ratioX * 2 * TILT_AMOUNT).toFixed(2);
-                el.style.setProperty('--kanban-tilt-x', `${tiltX}deg`);
-                el.style.setProperty('--kanban-tilt-y', `${tiltY}deg`);
+            const el = rootRef.current;
+            const size = el ? el.offsetWidth : 120;
+            const maxX = Math.max(0, window.innerWidth - size);
+            const maxY = Math.max(0, window.innerHeight - size);
+            
+            const clampedX = clamp(newX, 0, maxX);
+            const clampedY = clamp(newY, 0, maxY);
+            
+            setPosition({ x: clampedX, y: clampedY });
+
+            const btn = buttonRef.current;
+            if (btn) {
+                const ratioX = (e.clientX - data.startX) / 120;
+                const ratioY = (e.clientY - data.startY) / 120;
+                const tiltX = (-ratioY * TILT_AMOUNT).toFixed(2);
+                const tiltY = (ratioX * TILT_AMOUNT).toFixed(2);
+                btn.style.setProperty('--kanban-tilt-x', `${tiltX}deg`);
+                btn.style.setProperty('--kanban-tilt-y', `${tiltY}deg`);
             }
         }
 
@@ -364,8 +405,12 @@
             if (data.moved) {
                 ignoreClick.current = true;
                 const pos = position;
-                if (pos) savePos(pos.x, pos.y);
-                setState('idle');
+                if (pos) {
+                    savePos(pos.x, pos.y);
+                }
+                setTimeout(() => {
+                    setState('idle');
+                }, 50);
             }
         }
 
@@ -378,7 +423,6 @@
         }
 
         // ----- Effects -----
-        // 帧动画
         useEffect(() => {
             const config = SPRITE_CONFIG[state];
             if (reducedMotion.current) {
@@ -434,7 +478,6 @@
             return () => timers.forEach(t => clearTimeout(t));
         }, [state]);
 
-        // 初始化问候
         useEffect(() => {
             if (localStorage.getItem(STORAGE_GREETED)) return;
             localStorage.setItem(STORAGE_GREETED, '1');
@@ -445,7 +488,6 @@
             return () => clearTimeout(t);
         }, []);
 
-        // 预加载图片
         useEffect(() => {
             Object.values(SPRITE_CONFIG).forEach(config => {
                 const img = new Image();
@@ -453,7 +495,6 @@
             });
         }, []);
 
-        // 定时器管理
         useEffect(() => {
             resetAllTimers();
             return () => {
@@ -465,14 +506,13 @@
             };
         }, []);
 
-        // 窗口resize处理
         useEffect(() => {
             const handleResize = () => {
                 const el = rootRef.current;
                 if (!el || !position) return;
-                const w = el.offsetWidth || 120;
-                const newX = clamp(position.x, 0, Math.max(0, window.innerWidth - w));
-                const newY = clamp(position.y, 0, Math.max(0, window.innerHeight - w));
+                const size = el.offsetWidth || 120;
+                const newX = clamp(position.x, 0, Math.max(0, window.innerWidth - size));
+                const newY = clamp(position.y, 0, Math.max(0, window.innerHeight - size));
                 if (newX !== position.x || newY !== position.y) {
                     setPosition({ x: newX, y: newY });
                     savePos(newX, newY);
@@ -482,7 +522,6 @@
             return () => window.removeEventListener('resize', handleResize);
         }, [position]);
 
-        // 点击外部关闭菜单
         useEffect(() => {
             if (!menuOpen) return;
             const handler = (e) => {
@@ -511,7 +550,7 @@
             className: 'kanban-girl-root',
             style: style
         }, [
-            // 气泡和菜单
+            // 气泡和菜单 - 使用底部对齐
             React.createElement('div', { key: 'pop', className: 'kanban-girl-pop' },
                 bubble && React.createElement('p', {
                     className: 'kanban-girl-bubble',
@@ -534,7 +573,6 @@
                 )
             ),
 
-            // 看板娘主体
             React.createElement('button', {
                 key: 'girl',
                 ref: buttonRef,
@@ -557,15 +595,11 @@
                 })
             }),
 
-            // 阴影
             React.createElement('div', { key: 'shadow', className: 'kanban-girl-shadow', 'aria-hidden': true }),
-
-            // 气泡点
             React.createElement('span', { key: 'dot1', className: 'kanban-girl-bubble-dot', 'aria-hidden': true }),
             React.createElement('span', { key: 'dot2', className: 'kanban-girl-bubble-dot', 'aria-hidden': true }),
             React.createElement('span', { key: 'dot3', className: 'kanban-girl-bubble-dot', 'aria-hidden': true }),
 
-            // 爱心
             ...hearts.map(h => React.createElement('span', {
                 key: h.id,
                 className: 'kanban-girl-heart',

@@ -1,253 +1,290 @@
-/* 看板娘样式 - 添加到 styles.css */
-.kanban-girl-root {
-    position: fixed;
-    z-index: 9999;
-    width: 120px;
-    height: 120px;
-    user-select: none;
-    touch-action: none;
-    cursor: grab;
-}
+/* ===== 看板娘样式（融合版） ===== */
+/* 使用 styles.css 中的 CSS 变量，避免冲突 */
 
-.kanban-girl-root:active {
-    cursor: grabbing;
+.kanban-girl-root {
+    --kanban-size: 110px;
+    z-index: 60;
+    width: var(--kanban-size);
+    height: var(--kanban-size);
+    perspective: 600px;
+    pointer-events: none;
+    position: fixed;
 }
 
 .kanban-girl {
-    position: relative;
+    cursor: grab;
+    pointer-events: auto;
+    touch-action: none;
     width: 100%;
     height: 100%;
-    background: none;
-    border: none;
+    background: transparent;
+    border: 0;
     padding: 0;
-    cursor: pointer;
-    display: block;
+    position: absolute;
+    inset: 0;
+    transition: none; 
+}
+
+.kanban-girl:hover,
+.kanban-girl:focus-visible {
+    cursor: grab;
+}
+
+.kanban-girl:focus-visible {
+    box-shadow: var(--shadow-focus);
+    outline: none;
+}
+
+.kanban-girl.is-dragging {
+    cursor: grabbing;
     touch-action: none;
+    user-select: none;
+    transition: none;
 }
 
 .kanban-girl-flip {
-    display: block;
-    width: 100%;
-    height: 100%;
-    transition: transform 0.15s ease;
-}
-
-.kanban-girl-3d {
-    position: relative;
-    display: block;
     width: 100%;
     height: 100%;
     transform-style: preserve-3d;
-    transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+    transition: transform 0.3s var(--ease, ease);
+    display: block;
+}
+
+.kanban-girl-3d {
+    width: 100%;
+    height: 100%;
+    transform-style: preserve-3d;
+    will-change: transform;
+    animation: 8s ease-in-out infinite alternate kanban-sway;
+    display: block;
 }
 
 .kanban-girl-sprite {
+    image-rendering: auto;
+    filter: drop-shadow(0 12px 10px rgb(var(--shadow-rgb, 18 20 30) / 30%));
+    background-repeat: no-repeat;
     position: absolute;
     inset: 0;
-    width: 100%;
-    height: 100%;
-    background-size: 300% 100%;
-    background-position: 0% 0%;
-    image-rendering: pixelated;
+}
+
+.kanban-girl-sprite.kanban-girl-depth {
+    filter: blur(6px) brightness(0.5) saturate(0.75);
+    pointer-events: none;
+    position: absolute;
+    inset: 0;
+    transform: translateZ(-32px);
+}
+
+.kanban-girl-sprite.is-tilt {
+    animation: 0.9s ease-in-out infinite alternate kanban-tilt;
 }
 
 .kanban-girl-sprite.is-float {
-    animation: float 3s ease-in-out infinite;
-}
-
-.kanban-girl-depth {
-    opacity: 0.12;
-    transform: translateY(12px) scale(0.85);
-    filter: blur(4px);
+    animation: 2.6s ease-in-out infinite kanban-float;
 }
 
 .kanban-girl-shadow {
-    position: absolute;
-    bottom: 4px;
-    left: 50%;
-    transform: translateX(-50%);
-    width: 60%;
-    height: 8px;
-    background: radial-gradient(ellipse, rgba(0,0,0,0.15) 0%, transparent 70%);
-    border-radius: 50%;
+    background: rgb(var(--shadow-rgb, 18 20 30) / 14%);
     pointer-events: none;
-}
-
-.kanban-girl-shine {
-    position: absolute;
-    top: 8%;
-    right: 12%;
-    width: 20%;
-    height: 12%;
-    background: radial-gradient(ellipse, rgba(255,255,255,0.3) 0%, transparent 70%);
     border-radius: 50%;
-    pointer-events: none;
-    opacity: 0.6;
-}
-
-.kanban-girl-bubble-dot {
+    height: 10px;
     position: absolute;
-    width: 6px;
-    height: 6px;
-    background: rgba(255, 255, 255, 0.8);
-    border-radius: 50%;
-    pointer-events: none;
-    opacity: 0;
-}
-
-.kanban-girl-bubble-dot:nth-child(1) {
     bottom: -4px;
-    left: 40%;
-    width: 8px;
-    height: 8px;
+    left: 10%;
+    right: 10%;
 }
 
-.kanban-girl-bubble-dot:nth-child(2) {
-    bottom: -8px;
-    left: 50%;
-    width: 5px;
-    height: 5px;
-}
-
-.kanban-girl-bubble-dot:nth-child(3) {
-    bottom: -12px;
-    left: 58%;
-    width: 4px;
-    height: 4px;
-}
-
+/* ===== 气泡容器 - 从底部向上弹出 ===== */
 .kanban-girl-pop {
-    position: absolute;
-    top: -80px;
-    left: 50%;
-    transform: translateX(-50%);
-    display: flex;
+    pointer-events: none;
     flex-direction: column;
-    align-items: center;
-    gap: 8px;
-    width: 180px;
+    align-items: flex-end;
+    gap: 6px;
+    display: flex;
+    position: absolute;
+    bottom: calc(100% + 10px);
+    right: 0;
 }
 
 .kanban-girl-bubble {
-    background: white;
-    padding: 10px 16px;
-    border-radius: 16px;
+    box-sizing: border-box;
+    border: 1px solid var(--line, #e8e9ee);
+    background: var(--surface, #ffffff);
+    max-width: min(250px, 100vw - 32px);
+    box-shadow: var(--shadow-md);
+    color: var(--ink, #16181d);
+    pointer-events: auto;
+    animation: kanban-pop-in 0.14s var(--ease, cubic-bezier(0.22, 0.61, 0.36, 1));
+    border-radius: 12px 12px 2px;
+    margin: 0;
+    padding: 8px 12px;
     font-size: 13px;
     line-height: 1.5;
-    color: #1a1a2e;
-    margin: 0;
-    box-shadow: 0 4px 20px rgba(0,0,0,0.08);
-    width: 100%;
-    text-align: center;
-    animation: bubbleIn 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
-}
-
-.kanban-girl-bubble::after {
-    content: '';
-    position: absolute;
-    bottom: -8px;
-    left: 50%;
-    transform: translateX(-50%);
-    border-left: 8px solid transparent;
-    border-right: 8px solid transparent;
-    border-top: 8px solid white;
 }
 
 .kanban-girl-menu {
+    pointer-events: auto;
+    gap: 6px;
     display: flex;
-    gap: 8px;
-    animation: menuIn 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
 }
 
 .kanban-girl-action {
-    background: white;
-    border: none;
-    border-radius: 50%;
-    width: 40px;
-    height: 40px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
+    border: 1px solid var(--line, #e8e9ee);
+    background: var(--surface, #ffffff);
+    width: 36px;
+    height: 36px;
+    box-shadow: var(--shadow-sm);
+    color: var(--brand-dark, #2844c5);
     cursor: pointer;
-    box-shadow: 0 2px 12px rgba(0,0,0,0.08);
-    transition: all 0.2s ease;
-    padding: 0;
-    color: #4d6bfe;
-    font-size: 18px;
+    transition: border-color 0.14s var(--ease, cubic-bezier(0.22, 0.61, 0.36, 1)), background-color 0.14s var(--ease, cubic-bezier(0.22, 0.61, 0.36, 1)), transform 0.14s var(--ease, cubic-bezier(0.22, 0.61, 0.36, 1));
+    border-radius: 50%;
+    justify-content: center;
+    align-items: center;
+    display: inline-flex;
 }
 
 .kanban-girl-action:hover {
-    transform: scale(1.1);
-    box-shadow: 0 4px 20px rgba(77, 107, 254, 0.2);
-    background: #f8f9ff;
+    border-color: var(--line-strong, #d5d7e0);
+    background: var(--surface-hover, #f6f6f9);
+    transform: var(--lift, translateY(-1px));
+}
+
+.kanban-girl-action:focus-visible {
+    box-shadow: var(--shadow-focus);
+    outline: none;
+}
+
+.kanban-girl-bubble-dot {
+    background: var(--brand-border, #c2ccff);
+    opacity: 0;
+    pointer-events: none;
+    border-radius: 50%;
+    width: 5px;
+    height: 5px;
+    animation: 6s ease-in infinite kanban-bubbles;
+    position: absolute;
+    bottom: 18px;
+    right: 22%;
+}
+
+.kanban-girl-bubble-dot:nth-child(4) {
+    animation-delay: 2s;
+    bottom: 26px;
+    right: 18%;
+}
+
+.kanban-girl-bubble-dot:nth-child(5) {
+    animation-delay: 4s;
+    bottom: 24px;
+    right: 26%;
 }
 
 .kanban-girl-heart {
-    position: absolute;
-    font-size: 18px;
-    color: #ff6b8a;
-    animation: heartFloat 1.2s ease-out forwards;
+    color: var(--accent-coral, #e2445f);
     pointer-events: none;
+    font-size: 16px;
+    line-height: 1;
+    animation: 1.2s ease-out forwards kanban-heart;
+    position: absolute;
+    bottom: 26px;
+    left: 50%;
 }
 
-@keyframes bubbleIn {
-    from {
-        opacity: 0;
-        transform: scale(0.8) translateY(10px);
-    }
-    to {
-        opacity: 1;
-        transform: scale(1) translateY(0);
-    }
-}
-
-@keyframes menuIn {
-    from {
-        opacity: 0;
-        transform: scale(0.8) translateY(-10px);
-    }
-    to {
-        opacity: 1;
-        transform: scale(1) translateY(0);
-    }
-}
-
-@keyframes heartFloat {
+/* ===== 动画 ===== */
+@keyframes kanban-sway {
     0% {
-        opacity: 1;
-        transform: translateY(0) scale(1);
+        transform: rotateY(-5deg) rotateX(1.5deg);
     }
-    100% {
-        opacity: 0;
-        transform: translateY(-60px) scale(0.5);
+    to {
+        transform: rotateY(5deg) rotateX(-1.5deg);
     }
 }
 
-@keyframes float {
-    0%, 100% {
+@keyframes kanban-tilt {
+    0% {
+        transform: rotate(-6deg);
+    }
+    to {
+        transform: rotate(6deg);
+    }
+}
+
+@keyframes kanban-float {
+    0%,
+    to {
         transform: translateY(0);
     }
     50% {
-        transform: translateY(-6px);
+        transform: translateY(-4px);
     }
 }
 
-@media (max-width: 480px) {
+@keyframes kanban-pop-in {
+    0% {
+        opacity: 0;
+        transform: translateY(4px) scale(0.96);
+    }
+    to {
+        opacity: 1;
+        transform: none;
+    }
+}
+
+@keyframes kanban-heart {
+    0% {
+        opacity: 0;
+        transform: translateY(0) scale(0.6);
+    }
+    15% {
+        opacity: 1;
+    }
+    to {
+        opacity: 0;
+        transform: translateY(-46px) scale(1.15);
+    }
+}
+
+@keyframes kanban-bubbles {
+    0%,
+    62% {
+        opacity: 0;
+        transform: translateY(0);
+    }
+    68% {
+        opacity: 0.9;
+    }
+    to {
+        opacity: 0;
+        transform: translateY(-26px);
+    }
+}
+
+/* ===== 响应式 ===== */
+@media (width <= 680px) {
     .kanban-girl-root {
-        width: 80px;
-        height: 80px;
-    }
-    .kanban-girl-pop {
-        top: -70px;
-        width: 140px;
-    }
-    .kanban-girl-bubble {
-        font-size: 11px;
-        padding: 8px 12px;
+        --kanban-size: 72px;
     }
     .kanban-girl-action {
-        width: 32px;
-        height: 32px;
-        font-size: 14px;
+        width: 44px;
+        height: 44px;
+    }
+}
+
+/* ===== 减少动画偏好 ===== */
+@media (prefers-reduced-motion: reduce) {
+    .kanban-girl-3d,
+    .kanban-girl-sprite,
+    .kanban-girl-bubble-dot {
+        animation: none;
+    }
+    .kanban-girl-depth {
+        display: none;
+    }
+    .kanban-girl,
+    .kanban-girl-flip {
+        transition: none;
+    }
+    .kanban-girl-bubble-dot {
+        display: none;
     }
 }
