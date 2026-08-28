@@ -12,11 +12,20 @@
 	</h1>
 	<!-- <input type="text" placeholder="请输入内容(反正没用)"> -->
 	<!-- <a href="#tips">123</a> -->
-	<h2 title="看这干嘛">相见就是缘分，欢迎来这坐坐</h2>
+	<h2 title="虽然我没有椅子">相见就是缘分，欢迎来这坐坐</h2>
 	<!-- <a  href="http://www.bilibili.com" target="_blank" rel="noopener noreferrer">
 		<h3>bilibili</h3>
 	</a> -->
-	<img src="./file/touxiang.jpg" width=300 title="好看吗" onclick="tp()">
+	<section class="profile-showcase" aria-label="联系方式">
+		<img class="profile-avatar" src="./file/touxiang.jpg" width=300 title="好看吗" onclick="tp()">
+		<div class="contact-card">
+			<div class="contact-details" id="contact-details">
+				<p class="contact-label" id="contact-label">QQ：</p>
+				<p class="contact-value" id="contact-value">剪云舞影月华悠</p>
+			</div>
+			<button class="copy-button" id="copy-button" type="button">📄 复制</button>
+		</div>
+	</section>
 	<iframe frameborder="no" border="0" marginwidth="0" marginheight="0" width=330 height=86 src="//music.163.com/outchain/player?type=2&id=2755132184&auto=1&height=66">
 		<p>没用了<p\>
 	</iframe>
@@ -32,4 +41,73 @@
 	<hr><!-- 这是一个水平线 -->
 	<p>感觉不好看？因为还没做好呢。</p>
 	<!-- <a id="tips"></a> -->
+	<div class="copy-toast" id="copy-toast" role="status" aria-live="polite"></div>
+	<script>
+		const contactItems = [
+			["QQ：剪云舞影月华悠", "2924832727"],
+			["原神：剪云舞影月华悠", "307126423"],
+			["崩铁：我自己都不知道", "怎么告诉你啊"],
+			["邮箱：剪云舞影月华悠", "2924832727@qq.com"],
+			["GitHub：JYWYYHY", "https://github.com/JYWYYHY/"]
+		];
+
+		const contactLabel = document.getElementById("contact-label");
+		const contactValue = document.getElementById("contact-value");
+		const contactDetails = document.getElementById("contact-details");
+		const copyButton = document.getElementById("copy-button");
+		const copyToast = document.getElementById("copy-toast");
+		const profileShowcase = document.querySelector(".profile-showcase");
+		const wideLayout = window.matchMedia("(min-width: 55rem)");
+		let currentContact = 0;
+
+		function showContact(index) {
+			currentContact = index;
+			contactLabel.textContent = contactItems[index][0];
+			contactValue.textContent = contactItems[index][1];
+		}
+
+		function switchContact(index) {
+			contactDetails.classList.remove("is-entering");
+			contactDetails.classList.add("is-leaving");
+			setTimeout(() => {
+				showContact(index);
+				contactDetails.classList.remove("is-leaving");
+				contactDetails.classList.add("is-entering");
+				setTimeout(() => contactDetails.classList.remove("is-entering"), 450);
+			}, 300);
+		}
+
+		function copyText(text) {
+			if (navigator.clipboard) {
+				return navigator.clipboard.writeText(text);
+			}
+			const textarea = document.createElement("textarea");
+			textarea.value = text;
+			document.body.appendChild(textarea);
+			textarea.select();
+			document.execCommand("copy");
+			textarea.remove();
+			return Promise.resolve();
+		}
+
+		copyButton.addEventListener("click", () => {
+			const copiedText = contactItems[currentContact][1];
+			copyText(copiedText).then(() => {
+				copyToast.textContent = `复制成功喵~：“${copiedText}”`;
+				copyToast.classList.add("is-visible");
+				clearTimeout(copyToast.hideTimer);
+				copyToast.hideTimer = setTimeout(() => {
+					copyToast.classList.remove("is-visible");
+				}, 3000);
+			});
+		});
+
+		showContact(0);
+		if (wideLayout.matches) {
+			setTimeout(() => profileShowcase.classList.add("is-ready"), 80);
+		}
+		setInterval(() => {
+			switchContact((currentContact + 1) % contactItems.length);
+		}, 3000);
+	</script>
 </html>
