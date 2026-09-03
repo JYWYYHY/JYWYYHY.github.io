@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>假的</title>
+  <!-- 简单样式让布局更整洁 (不影响图片尺寸) -->
+  <style>
+    body {
+      font-family: system-ui, sans-serif;
+      background: #f9f9f9;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+      margin: 0;
+      padding: 20px;
+      text-align: center;
+    }
+    .card {
+      background: white;
+      border-radius: 24px;
+      padding: 30px 40px 40px;
+      box-shadow: 0 12px 30px rgba(0,0,0,0.08);
+      max-width: 600px;
+      width: 100%;
+    }
+    h1 {
+      color: #e34b3b;
+      font-weight: 600;
+      letter-spacing: 1px;
+      margin-top: 0;
+    }
+    img {
+      display: block;
+      margin: 20px auto;
+      /* 下面 width 和 height 由 HTML 属性控制，这里仅确保自适应 */
+      max-width: 100%;
+      height: auto; 
+      border-radius: 16px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+    }
+    a {
+      text-decoration: none;
+      color: #1e1e1e;
+      transition: opacity 0.2s;
+    }
+    a:hover {
+      opacity: 0.7;
+    }
+    h3 {
+      background: #f0f0f0;
+      display: inline-block;
+      padding: 10px 28px;
+      border-radius: 40px;
+      font-weight: 500;
+      margin: 10px 0 0;
+      font-size: 1.2rem;
+    }
+    .footnote {
+      margin-top: 20px;
+      color: #888;
+      font-size: 0.9rem;
+    }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <h1>转转赞助播出</h1>
+
+    <!-- 
+      设置图片的长宽： 
+      使用 width 和 height 属性明确指定尺寸 (单位: 像素)
+      同时保留 max-width:100% 让图片在小屏设备上不溢出
+    -->
+    <img 
+      src="./回收旧首级上转转.png" 
+      alt="回收旧首级上转转" 
+      width="420" 
+      height="280"
+      loading="lazy"
+    >
+
+    <a href="https://www.bilibili.com/video/BV1GJ411x7h7/" target="_blank" rel="noopener noreferrer">
+      <h3>点击查看PK帅照</h3>
+    </a>
+  </div>
+</body>
+</html>

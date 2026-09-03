@@ -1,0 +1,365 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>人机检测 · 算术验证</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            background: linear-gradient(145deg, #0b1424 0%, #1a2744 50%, #0f1a2e 100%);
+            font-family: 'Segoe UI', 'PingFang SC', Roboto, system-ui, sans-serif;
+            padding: 20px;
+        }
+
+        .container {
+            background: rgba(255, 255, 255, 0.05);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border-radius: 48px;
+            padding: 50px 40px 44px;
+            max-width: 480px;
+            width: 100%;
+            text-align: center;
+            box-shadow: 0 30px 60px rgba(0, 0, 0, 0.5), 0 0 0 1px rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.06);
+            min-height: 300px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            transition: all 0.3s ease;
+        }
+
+        /* 主标题 / 状态文本 */
+        .status-text {
+            color: #f0ecf0;
+            font-size: 1.8rem;
+            font-weight: 300;
+            letter-spacing: 0.06em;
+            margin-bottom: 12px;
+            transition: all 0.25s;
+            word-break: break-word;
+        }
+
+        .status-text .highlight {
+            color: #f5d78c;
+            font-weight: 400;
+        }
+
+        .sub-status {
+            color: #9aaec9;
+            font-size: 0.95rem;
+            letter-spacing: 0.3px;
+            margin-bottom: 20px;
+            opacity: 0.8;
+            min-height: 1.5em;
+        }
+
+        /* 加载动画 (检测状态) */
+        .loader {
+            display: inline-block;
+            width: 40px;
+            height: 40px;
+            border: 3px solid rgba(255, 255, 255, 0.08);
+            border-top: 3px solid #f5d78c;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin: 16px auto 8px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        /* 题目区域 (初始隐藏) */
+        .question-area {
+            display: none;
+            flex-direction: column;
+            align-items: center;
+            width: 100%;
+            animation: fadeUp 0.5s ease forwards;
+        }
+
+        .question-area.active {
+            display: flex;
+        }
+
+        @keyframes fadeUp {
+            0% { opacity: 0; transform: translateY(12px); }
+            100% { opacity: 1; transform: translateY(0); }
+        }
+
+        .question-text {
+            color: #e8e4f0;
+            font-size: 2.6rem;
+            font-weight: 300;
+            letter-spacing: 0.04em;
+            margin-bottom: 24px;
+            background: rgba(255, 255, 255, 0.03);
+            padding: 6px 28px;
+            border-radius: 60px;
+            border: 1px solid rgba(255, 215, 0, 0.08);
+        }
+
+        .question-text strong {
+            color: #f5d78c;
+            font-weight: 400;
+        }
+
+        .options {
+            display: flex;
+            gap: 20px;
+            justify-content: center;
+            flex-wrap: wrap;
+            margin-top: 6px;
+        }
+
+        .option-btn {
+            background: rgba(255, 255, 255, 0.04);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            color: #e8e4f0;
+            font-size: 1.8rem;
+            font-weight: 400;
+            width: 80px;
+            height: 80px;
+            border-radius: 50%;
+            cursor: pointer;
+            transition: all 0.2s;
+            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2);
+            backdrop-filter: blur(4px);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            letter-spacing: 0.5px;
+        }
+
+        .option-btn:hover {
+            transform: scale(1.06);
+            background: rgba(255, 215, 0, 0.08);
+            border-color: rgba(255, 215, 0, 0.25);
+            box-shadow: 0 8px 28px rgba(180, 140, 70, 0.15);
+        }
+
+        .option-btn:active {
+            transform: scale(0.94);
+        }
+
+        /* 答案反馈 */
+        .feedback-area {
+            margin-top: 28px;
+            min-height: 64px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            width: 100%;
+        }
+
+        .feedback-text {
+            font-size: 1.6rem;
+            font-weight: 300;
+            color: #f5e8d0;
+            letter-spacing: 0.04em;
+            animation: fadeUp 0.4s ease;
+        }
+
+        .feedback-text .highlight {
+            color: #f5d78c;
+            font-weight: 400;
+        }
+
+        .feedback-text .code-block {
+            display: inline-block;
+            background: rgba(255, 215, 0, 0.06);
+            border: 1px solid rgba(255, 215, 0, 0.08);
+            padding: 0 18px;
+            border-radius: 40px;
+            font-size: 1.4rem;
+            color: #f5d78c;
+            margin-top: 4px;
+            letter-spacing: 0.5px;
+        }
+
+        /* 辅助 / 脚注 */
+        .footer-note {
+            margin-top: 24px;
+            color: #4a5f78;
+            font-size: 0.7rem;
+            letter-spacing: 0.4px;
+            border-top: 1px solid rgba(255, 255, 255, 0.03);
+            padding-top: 16px;
+            width: 100%;
+        }
+
+        /* 响应式 */
+        @media (max-width: 420px) {
+            .container { padding: 32px 20px 28px; }
+            .status-text { font-size: 1.5rem; }
+            .question-text { font-size: 2rem; padding: 4px 16px; }
+            .option-btn { width: 68px; height: 68px; font-size: 1.5rem; }
+        }
+    </style>
+</head>
+<body>
+    <div class="container" id="appContainer">
+        <!-- 状态一: 正在检测 -->
+        <div id="detectPhase">
+            <div class="status-text">🔍 正在检测您是不是人机</div>
+            <div class="loader"></div>
+            <div class="sub-status">请稍候，系统验证中...</div>
+        </div>
+
+        <!-- 状态二: 算术题 (初始隐藏) -->
+        <div id="questionPhase" class="question-area">
+            <div class="question-text">
+                1 + 1 = <strong>?</strong>
+            </div>
+            <div class="options">
+                <button class="option-btn" data-value="1">PK</button>
+                <button class="option-btn" data-value="3">3</button>
+                <button class="option-btn" data-value="2">2</button>
+                <button class="option-btn" data-value="4">钝角</button>
+            </div>
+            <div class="feedback-area" id="feedbackArea">
+                <!-- 动态显示反馈 -->
+            </div>
+        </div>
+
+       
+    </div>
+
+    <script>
+        (function() {
+            // ---------- DOM 引用 ----------
+            const detectPhase = document.getElementById('detectPhase');
+            const questionPhase = document.getElementById('questionPhase');
+            const feedbackArea = document.getElementById('feedbackArea');
+            const optionBtns = document.querySelectorAll('.option-btn');
+
+            // ---------- 核心流程 ----------
+            // 1. 进入页面立即显示 "正在检测"，等待 2.5 秒后切换到题目
+            const DETECT_DELAY = 2500; // 2.5 秒
+
+            // 2. 正确密码/答案 (点击 2 时触发)
+            const CORRECT_ANSWER = '2';          // 按钮的 data-value
+            const SUCCESS_MESSAGE = '真棒！';
+            const SECRET_CODE = '密码是：zuanka';
+
+            // 3. 切换函数: 从检测 -> 题目
+            function showQuestion() {
+                detectPhase.style.display = 'none';
+                questionPhase.classList.add('active');
+                // 清空之前的反馈 (如果有)
+                feedbackArea.innerHTML = '';
+            }
+
+            // 4. 处理点击答案
+            function handleOptionClick(e) {
+                const btn = e.currentTarget;
+                const value = btn.getAttribute('data-value');
+
+                // 如果已经显示成功反馈，不再重复触发 (避免重复点击)
+                if (feedbackArea.dataset.locked === 'true') {
+                    return;
+                }
+
+                // 检查答案
+                if (value === CORRECT_ANSWER) {
+                    // 正确！
+                    feedbackArea.dataset.locked = 'true'; // 锁定，防止再次点击改变
+
+                    // 清空反馈区，显示 "真棒！" 和 "zuanka"
+                    feedbackArea.innerHTML = `
+                        <div class="feedback-text">
+                            ✨ ${SUCCESS_MESSAGE} 
+                            <span class="highlight">🎉</span>
+                        </div>
+                        <div class="feedback-text" style="margin-top: 4px;">
+                            <span class="code-block">${SECRET_CODE}</span>
+                        </div>
+                    `;
+
+                    // 可选：高亮所有按钮（视觉反馈）
+                    optionBtns.forEach(btn => {
+                        if (btn.getAttribute('data-value') === CORRECT_ANSWER) {
+                            btn.style.background = 'rgba(255, 215, 0, 0.15)';
+                            btn.style.borderColor = '#f5d78c';
+                            btn.style.boxShadow = '0 0 30px rgba(255, 215, 0, 0.15)';
+                        } else {
+                            btn.style.opacity = '0.4';
+                            btn.style.cursor = 'default';
+                        }
+                    });
+
+                    // 控制台输出
+                    console.log('✅ 答案正确！', SUCCESS_MESSAGE, SECRET_CODE);
+                } else {
+                    // 错误答案：给一个小反馈（但不影响整体，可晃动提示）
+                    btn.style.transform = 'scale(0.85)';
+                    setTimeout(() => {
+                        btn.style.transform = '';
+                    }, 200);
+
+                    // 短暂提示错误 (轻量)
+                    feedbackArea.innerHTML = `
+                        <div class="feedback-text" style="color: #d4a0a0; font-size: 1.2rem;">
+                            ❌ 再想想哦
+                        </div>
+                    `;
+                    // 0.8秒后清空错误提示 (但保留之前的反馈区)
+                    setTimeout(() => {
+                        if (feedbackArea.dataset.locked !== 'true') {
+                            feedbackArea.innerHTML = '';
+                        }
+                    }, 800);
+
+                    console.warn('❌ 错误答案:', value);
+                }
+            }
+
+            // ---------- 事件绑定 ----------
+            optionBtns.forEach(btn => {
+                btn.addEventListener('click', handleOptionClick);
+            });
+
+            // ---------- 页面加载后启动计时器 ----------
+            window.addEventListener('load', function() {
+                // 确保初始状态正确
+                detectPhase.style.display = 'block';
+                questionPhase.classList.remove('active');
+                feedbackArea.innerHTML = '';
+                feedbackArea.dataset.locked = 'false';
+
+                // 重置按钮样式 (避免上次残留)
+                optionBtns.forEach(btn => {
+                    btn.style.background = '';
+                    btn.style.borderColor = '';
+                    btn.style.boxShadow = '';
+                    btn.style.opacity = '1';
+                    btn.style.cursor = 'pointer';
+                });
+
+                // 开始计时器
+                setTimeout(function() {
+                    showQuestion();
+                }, DETECT_DELAY);
+            });
+
+            // 额外：控制台信息
+            console.log('🧠 人机检测已启动，等待 2.5 秒后显示题目');
+            console.log('💡 正确答案: 点击 "2"  →  显示 "真棒！" 和 "zuanka"');
+        })();
+    </script>
+</body>
+</html>

@@ -6,6 +6,20 @@
 	<link rel="stylesheet" href="./styles.css">
 	<link rel="stylesheet" href="./kanban-girl/kanban-girl.css">
 	<link rel="shortcut icon" href="./file/666.ico">
+<!-- PK -->
+<style>
+    @keyframes shakeLinkInline {
+        0% { transform: translateX(0); }
+        15% { transform: translateX(-10px); }
+        30% { transform: translateX(10px); }
+        45% { transform: translateX(-7px); }
+        60% { transform: translateX(7px); }
+        75% { transform: translateX(-4px); }
+        90% { transform: translateX(4px); }
+        100% { transform: translateX(0); }
+    }
+</style>
+<!-- PK -->
 </head>
 <body>
 	<h1>
@@ -14,9 +28,45 @@
 	<!-- <input type="text" placeholder="请输入内容(反正没用)"> -->
 	<!-- <a href="#tips">123</a> -->
 	<h2 title="虽然我没有椅子">相见就是缘分，欢迎来这坐坐</h2>
-	<!-- <a  href="http://www.bilibili.com" target="_blank" rel="noopener noreferrer">
-		<h3>bilibili</h3>
-	</a> -->
+<!-- PK -->
+<a href="./pk/index.html" 
+   target="_blank" 
+   rel="noopener noreferrer" 
+   style="
+       all: initial;
+       display: inline-block;
+       cursor: pointer;
+       text-decoration: none;
+       font-family: 'Segoe UI', 'PingFang SC', Roboto, system-ui, sans-serif;
+       font-size: 1.2rem;
+       font-weight: 400;
+       color: #f5d78c;
+       background: rgba(255, 215, 0, 0.06);
+       padding: 14px 32px;
+       border-radius: 40px;
+       border: 1px solid rgba(255, 215, 0, 0.12);
+       backdrop-filter: blur(4px);
+       box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2);
+       transition: background 0.2s, transform 0.2s, box-shadow 0.2s;
+       animation: shakeLinkInline 1.2s ease-in-out infinite;
+   "
+   onmouseover="this.style.background='rgba(255, 215, 0, 0.14)'; this.style.borderColor='rgba(255, 215, 0, 0.25)'; this.style.boxShadow='0 8px 32px rgba(180, 140, 70, 0.2)'; this.style.transform='scale(1.03)';"
+   onmouseout="this.style.background='rgba(255, 215, 0, 0.06)'; this.style.borderColor='rgba(255, 215, 0, 0.12)'; this.style.boxShadow='0 4px 16px rgba(0, 0, 0, 0.2)'; this.style.transform='scale(1)';"
+>
+    <h3 style="
+        all: initial;
+        display: inline;
+        font-family: 'Segoe UI', 'PingFang SC', Roboto, system-ui, sans-serif;
+        font-size: 1.4rem;
+        font-weight: 400;
+        color: #f5d78c;
+        letter-spacing: 0.04em;
+        margin: 0;
+        padding: 0;
+        line-height: 1.4;
+    ">点击查看PK帅照</h3>
+</a>
+<!-- PK -->
 	<section class="profile-showcase" aria-label="联系方式">
 		<img class="profile-avatar" src="./file/touxiang.jpg" width=300 title="好看吗" onclick="tp()">
 		<div class="contact-card">
