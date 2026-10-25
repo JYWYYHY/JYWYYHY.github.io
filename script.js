@@ -2,7 +2,7 @@ const contactItems = [
     ["QQ：剪云舞影月华悠", "2924832727"],
     ["原神：剪云舞影月华悠", "307126423"],
     ["崩铁：我自己都不知道", "怎么告诉你啊"],
-    ["邮箱：剪云舞影月华悠", "2924832727@qq.com"],
+    ["邮箱：剪云舞影月华悠", "jywyyhy@outlook.com"],
     ["GitHub：JYWYYHY", "https://github.com/JYWYYHY/"]
 ];
 
