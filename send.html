@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>给我留言</title>
+    <style>
+        body { font-family: system-ui, sans-serif; max-width: 500px; margin: 40px auto; padding: 20px; }
+        input, textarea, button { width: 100%; padding: 10px; margin: 8px 0; box-sizing: border-box; font-size: 16px; }
+        textarea { height: 120px; resize: vertical; }
+        button { background: #007bff; color: white; border: none; cursor: pointer; border-radius: 4px; }
+        button:hover { background: #0056b3; }
+        .hidden { display: none; }
+    </style>
+</head>
+<body>
+    <h2>📮 给我留言</h2>
+    <form id="contactForm" action="https://api.web3forms.com/submit" method="POST">
+        <!-- 【1】替换成你的 Access Key -->
+        <input type="hidden" name="access_key" value="2783b0fd-90f0-498a-b22d-c50e69219e12">
+        
+        <!-- 蜜罐字段：正常用户看不到，用来拦截机器人 -->
+        <input type="checkbox" name="botcheck" class="hidden" style="display:none">
+        
+        <!-- 提交后跳转的页面（可选，不填则停留在当前页显示结果） -->
+        <input type="hidden" name="redirect" value="https://web3forms.com/success">
+
+        <input type="text" name="name" placeholder="你的名字（可不填）">
+        <textarea name="message" placeholder="输入你想说的话..." required></textarea>
+        
+        <button type="submit" id="submitBtn">发送留言</button>
+    </form>
+
+    <div id="result" style="text-align:center; margin-top:15px; color:#666;"></div>
+
+    <script>
+        const form = document.getElementById('contactForm');
+        const result = document.getElementById('result');
+        const submitBtn = document.getElementById('submitBtn');
+
+        form.addEventListener('submit', function(e) {
+            e.preventDefault(); // 阻止默认跳转，用 AJAX 提交
+            submitBtn.disabled = true;
+            submitBtn.textContent = '发送中...';
+            result.textContent = '';
+
+            const formData = new FormData(form);
+            
+            fetch(form.action, {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    result.textContent = '✅ 留言已成功发送，我会尽快查看！';
+                    result.style.color = 'green';
+                    form.reset(); // 清空表单
+                } else {
+                    result.textContent = '❌ 发送失败：' + (data.message || '未知错误');
+                    result.style.color = 'red';
+                }
+            })
+            .catch(error => {
+                result.textContent = '❌ 网络错误，请检查你的网络连接';
+                result.style.color = 'red';
+            })
+            .finally(() => {
+                submitBtn.disabled = false;
+                submitBtn.textContent = '发送留言';
+            });
+        });
+    </script>
+</body>
+</html>
