@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>给我留言</title>
+    <link rel="shortcut icon" href="./file/666.ico">
     <style>
         :root {
             --night: #17141f;
@@ -74,7 +75,6 @@
         input[type="text"],
         textarea {
             width: 100%;
-            /* 修复偏右的核心：让宽度包含 padding */
             box-sizing: border-box; 
             margin-bottom: 1.2rem;
             padding: 0.8rem 1rem;
@@ -95,12 +95,11 @@
         }
 
         textarea {
-            display: block; /* 消除底部空隙 */
+            display: block; 
             height: 8rem;
             resize: vertical;
         }
 
-        /* 同一行输入框的布局 */
         .input-row {
             display: flex;
             gap: 1rem;
@@ -108,12 +107,11 @@
         }
         
         .input-row input[type="text"] {
-            margin-bottom: 0; /* 移除自带的底部间距，由父容器控制 */
+            margin-bottom: 0; 
             flex: 1; 
-            min-width: 0; /* 防止文字过长撑破容器 */
+            min-width: 0; 
         }
 
-        /* 手机屏幕上自动变成上下两行 */
         @media (max-width: 450px) {
             .input-row {
                 flex-direction: column;
@@ -152,13 +150,26 @@
             transform: none;
         }
 
+        /* --- 修改提示框逻辑 --- */
         #result {
-            margin-top: 1.5rem;
             text-align: center;
             font-size: 0.95rem;
-            min-height: 1.5rem;
-            transition: color 300ms ease;
+            /* 初始隐藏，不占任何空间 */
+            max-height: 0;
+            opacity: 0;
+            margin-top: 0;
+            overflow: hidden;
+            /* 添加过渡动画，让容器平滑变长 */
+            transition: all 0.4s cubic-bezier(0.22, 1, 0.36, 1);
         }
+
+        /* 当有文字内容时，平滑撑开 */
+        #result:not(:empty) {
+            margin-top: 1.5rem;
+            max-height: 100px;
+            opacity: 1;
+        }
+        /* -------------------- */
 
         .hidden { display: none !important; }
     </style>
@@ -185,6 +196,8 @@
         <div id="result"></div>
     </div>
 
+    <p>由Web3Forms提供支持<p/>
+
     <script>
         const form = document.getElementById('contactForm');
         const result = document.getElementById('result');
@@ -194,7 +207,7 @@
             e.preventDefault();
             submitBtn.disabled = true;
             submitBtn.textContent = '发送中...';
-            result.textContent = '';
+            result.textContent = ''; // 这里清空会触发收缩
             result.style.color = 'var(--mist)';
 
             const formData = new FormData(form);
