@@ -5,33 +5,185 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>给我留言</title>
     <style>
-        body { font-family: system-ui, sans-serif; max-width: 500px; margin: 40px auto; padding: 20px; }
-        input, textarea, button { width: 100%; padding: 10px; margin: 8px 0; box-sizing: border-box; font-size: 16px; }
-        textarea { height: 120px; resize: vertical; }
-        button { background: #007bff; color: white; border: none; cursor: pointer; border-radius: 4px; }
-        button:hover { background: #0056b3; }
-        .hidden { display: none; }
+        :root {
+            --night: #17141f;
+            --ink: #29202d;
+            --plum: #493744;
+            --mist: rgba(226, 201, 197, 0.76);
+            --mist-light: rgba(246, 225, 211, 0.88);
+            --gold: #e7ad62;
+            --ember: #bd684e;
+        }
+
+        body {
+            min-height: 100vh;
+            margin: 0;
+            padding: clamp(2rem, 7vw, 6rem) 1.25rem;
+            color: var(--mist-light);
+            text-align: center;
+            font-family: Georgia, "Noto Serif SC", serif;
+            background:
+                linear-gradient(135deg, rgba(23, 20, 31, 0.9), rgba(71, 47, 57, 0.7)),
+                url("./file/IMG_2324.webp") center / cover fixed;
+        }
+
+        body::before {
+            position: fixed;
+            inset: 0;
+            z-index: -1;
+            content: "";
+            background: radial-gradient(circle at 50% 12%, rgba(231, 173, 98, 0.16), transparent 34rem);
+            pointer-events: none;
+        }
+
+        h1 {
+            margin: 0 auto 2rem;
+            color: var(--mist-light);
+            font-size: clamp(1.8rem, 4vw, 2.5rem);
+            font-weight: 500;
+            letter-spacing: 0.08em;
+            text-shadow: 0 2px 24px rgba(9, 7, 14, 0.75);
+        }
+
+        h1 small {
+            display: block;
+            margin-top: 0.4rem;
+            color: var(--gold);
+            font-size: 0.4em;
+            letter-spacing: 0.2em;
+        }
+
+        .form-card {
+            width: min(28rem, 90vw);
+            margin: 0 auto;
+            padding: 2rem 2.5rem;
+            border: 1px solid rgba(231, 173, 98, 0.48);
+            border-radius: 1rem;
+            background: rgba(42, 28, 39, 0.7);
+            box-shadow: 0 1rem 3rem rgba(11, 8, 16, 0.4);
+            backdrop-filter: blur(0.7rem);
+            text-align: left;
+            animation: contact-fade-in 900ms 160ms ease both;
+        }
+
+        @keyframes contact-fade-in {
+            from { transform: translateY(2rem); opacity: 0; }
+            to { transform: translateY(0); opacity: 1; }
+        }
+
+        input[type="text"],
+        textarea {
+            width: 100%;
+            /* 修复偏右的核心：让宽度包含 padding */
+            box-sizing: border-box; 
+            margin-bottom: 1.2rem;
+            padding: 0.8rem 1rem;
+            border: 1px solid rgba(231, 173, 98, 0.3);
+            border-radius: 0.5rem;
+            color: var(--mist-light);
+            background: rgba(23, 20, 31, 0.6);
+            font-family: inherit;
+            font-size: 1rem;
+            outline: none;
+            transition: border-color 300ms ease, box-shadow 300ms ease;
+        }
+
+        input[type="text"]:focus,
+        textarea:focus {
+            border-color: var(--gold);
+            box-shadow: 0 0 10px rgba(231, 173, 98, 0.2);
+        }
+
+        textarea {
+            display: block; /* 消除底部空隙 */
+            height: 8rem;
+            resize: vertical;
+        }
+
+        /* 同一行输入框的布局 */
+        .input-row {
+            display: flex;
+            gap: 1rem;
+            margin-bottom: 1.2rem;
+        }
+        
+        .input-row input[type="text"] {
+            margin-bottom: 0; /* 移除自带的底部间距，由父容器控制 */
+            flex: 1; 
+            min-width: 0; /* 防止文字过长撑破容器 */
+        }
+
+        /* 手机屏幕上自动变成上下两行 */
+        @media (max-width: 450px) {
+            .input-row {
+                flex-direction: column;
+                gap: 0;
+            }
+            .input-row input[type="text"] {
+                margin-bottom: 1.2rem;
+            }
+        }
+
+        button {
+            display: block;
+            width: 100%;
+            box-sizing: border-box;
+            padding: 0.9rem;
+            border: none;
+            border-radius: 999px;
+            color: var(--ink);
+            background: var(--gold);
+            font-family: inherit;
+            font-size: 1.1rem;
+            font-weight: bold;
+            cursor: pointer;
+            transition: transform 180ms ease, background 180ms ease;
+        }
+
+        button:hover {
+            background: #f3c985;
+            transform: translateY(-2px);
+        }
+
+        button:disabled {
+            background: var(--plum);
+            color: var(--mist);
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        #result {
+            margin-top: 1.5rem;
+            text-align: center;
+            font-size: 0.95rem;
+            min-height: 1.5rem;
+            transition: color 300ms ease;
+        }
+
+        .hidden { display: none !important; }
     </style>
 </head>
 <body>
-    <h2>📮 给我留言</h2>
-    <form id="contactForm" action="https://api.web3forms.com/submit" method="POST">
-        <!-- 【1】替换成你的 Access Key -->
-        <input type="hidden" name="access_key" value="2783b0fd-90f0-498a-b22d-c50e69219e12">
-        
-        <!-- 蜜罐字段：正常用户看不到，用来拦截机器人 -->
-        <input type="checkbox" name="botcheck" class="hidden" style="display:none">
-        
-        <!-- 提交后跳转的页面（可选，不填则停留在当前页显示结果） -->
-        <input type="hidden" name="redirect" value="https://web3forms.com/success">
+    <h1>给我留言<small>Leave a Message</small></h1>
+    
+    <div class="form-card">
+        <form id="contactForm" action="https://api.web3forms.com/submit" method="POST">
+            <input type="hidden" name="access_key" value="2783b0fd-90f0-498a-b22d-c50e69219e12">
+            
+            <input type="checkbox" name="botcheck" class="hidden" style="display:none">
 
-        <input type="text" name="name" placeholder="你的名字（可不填）">
-        <textarea name="message" placeholder="输入你想说的话..." required></textarea>
-        
-        <button type="submit" id="submitBtn">发送留言</button>
-    </form>
+            <div class="input-row">
+                <input type="text" name="name" placeholder="你的名字（必填）" required autocomplete="off">
+                <input type="text" name="contact" placeholder="联系方式（选填）" autocomplete="off">
+            </div>
+            
+            <textarea name="message" placeholder="输入你想说的话..." required></textarea>
+            
+            <button type="submit" id="submitBtn">发送留言</button>
+        </form>
 
-    <div id="result" style="text-align:center; margin-top:15px; color:#666;"></div>
+        <div id="result"></div>
+    </div>
 
     <script>
         const form = document.getElementById('contactForm');
@@ -39,10 +191,11 @@
         const submitBtn = document.getElementById('submitBtn');
 
         form.addEventListener('submit', function(e) {
-            e.preventDefault(); // 阻止默认跳转，用 AJAX 提交
+            e.preventDefault();
             submitBtn.disabled = true;
             submitBtn.textContent = '发送中...';
             result.textContent = '';
+            result.style.color = 'var(--mist)';
 
             const formData = new FormData(form);
             
@@ -53,17 +206,17 @@
             .then(response => response.json())
             .then(data => {
                 if (data.success) {
-                    result.textContent = '✅ 留言已成功发送，我会尽快查看！';
-                    result.style.color = 'green';
-                    form.reset(); // 清空表单
+                    result.textContent = '✅ 留言已成功发送！';
+                    result.style.color = 'var(--gold)';
+                    form.reset(); 
                 } else {
                     result.textContent = '❌ 发送失败：' + (data.message || '未知错误');
-                    result.style.color = 'red';
+                    result.style.color = 'var(--ember)';
                 }
             })
             .catch(error => {
                 result.textContent = '❌ 网络错误，请检查你的网络连接';
-                result.style.color = 'red';
+                result.style.color = 'var(--ember)';
             })
             .finally(() => {
                 submitBtn.disabled = false;
