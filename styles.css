@@ -28,7 +28,7 @@ body {
     font-family: "Cmdysj", Georgia, "Noto Serif SC", serif;
     background:
         linear-gradient(135deg, rgba(23, 20, 31, 0.9), rgba(71, 47, 57, 0.7)),
-        url("./file/IMG_2324.JPG") center / cover fixed;
+        url("./file/IMG_2324.webp") center / cover fixed;
 }
 
 body::before {
