@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>发送成功</title>
+    <style>
+        @font-face {
+            font-family: "Cmdysj";
+            src: url("./file/cmdysj.ttf") format("truetype");
+            font-display: swap;
+        }
+
+        :root {
+            --night: #17141f;
+            --mist-light: rgba(246, 225, 211, 0.88);
+            --gold: #e7ad62;
+        }
+
+        body {
+            min-height: 100vh;
+            margin: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: var(--mist-light);
+            text-align: center;
+            font-family: "Cmdysj", Georgia, serif;
+            background: var(--night);
+        }
+
+        .success-box {
+            padding: 3rem;
+            border: 1px solid rgba(231, 173, 98, 0.48);
+            border-radius: 1rem;
+            background: rgba(42, 28, 39, 0.7);
+            box-shadow: 0 1rem 3rem rgba(11, 8, 16, 0.4);
+        }
+
+        h1 {
+            color: var(--gold);
+            margin-bottom: 1rem;
+        }
+
+        a {
+            display: inline-block;
+            margin-top: 1.5rem;
+            padding: 0.6rem 1.5rem;
+            border: 1px solid var(--gold);
+            border-radius: 999px;
+            color: var(--mist-light);
+            text-decoration: none;
+            transition: all 0.3s ease;
+        }
+
+        a:hover {
+            background: var(--gold);
+            color: var(--night);
+        }
+    </style>
+</head>
+<body>
+    <div class="success-box">
+        <h1>✅ 留言已送达！</h1>
+        <p>感谢你的留言，我已经收到了。</p>
+        <a href="./send.html">再写一条</a>
+    </div>
+</body>
+</html>

@@ -3,10 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>给我留言 | 剪云舞影月华悠</title>
-    <link rel="shortcut icon" href="./file/666.ico">
+    <title>给我留言</title>
     <style>
-
         @font-face {
             font-family: "Cmdysj";
             src: url("./file/cmdysj.ttf") format("truetype");
@@ -129,6 +127,32 @@
             }
         }
 
+        /* 美化文件上传按钮 */
+        input[type="file"] {
+            width: 100%;
+            box-sizing: border-box;
+            margin-bottom: 1.5rem;
+            padding: 0.5rem;
+            border: 1px dashed rgba(231, 173, 98, 0.5);
+            border-radius: 0.5rem;
+            color: var(--mist);
+            font-family: inherit;
+            font-size: 0.9rem;
+            background: rgba(23, 20, 31, 0.3);
+            cursor: pointer;
+        }
+
+        input[type="file"]::file-selector-button {
+            padding: 0.4rem 0.8rem;
+            margin-right: 1rem;
+            border: none;
+            border-radius: 0.3rem;
+            color: var(--ink);
+            background: var(--gold);
+            font-family: inherit;
+            cursor: pointer;
+        }
+
         button {
             display: block;
             width: 100%;
@@ -150,34 +174,6 @@
             transform: translateY(-2px);
         }
 
-        button:disabled {
-            background: var(--plum);
-            color: var(--mist);
-            cursor: not-allowed;
-            transform: none;
-        }
-
-        /* --- 修改提示框逻辑 --- */
-        #result {
-            text-align: center;
-            font-size: 0.95rem;
-            /* 初始隐藏，不占任何空间 */
-            max-height: 0;
-            opacity: 0;
-            margin-top: 0;
-            overflow: hidden;
-            /* 添加过渡动画，让容器平滑变长 */
-            transition: all 0.4s cubic-bezier(0.22, 1, 0.36, 1);
-        }
-
-        /* 当有文字内容时，平滑撑开 */
-        #result:not(:empty) {
-            margin-top: 1.5rem;
-            max-height: 100px;
-            opacity: 1;
-        }
-        /* -------------------- */
-
         .hidden { display: none !important; }
     </style>
 </head>
@@ -185,10 +181,16 @@
     <h1>给我留言<small>Leave a Message</small></h1>
     
     <div class="form-card">
-        <form id="contactForm" action="https://api.web3forms.com/submit" method="POST">
-            <input type="hidden" name="access_key" value="2783b0fd-90f0-498a-b22d-c50e69219e12">
+        <!-- 关键改动：加入 data-netlify 属性，指定 action 为 success.html -->
+        <form name="contact" method="POST" data-netlify="true" enctype="multipart/form-data" action="/success.html">
             
-            <input type="checkbox" name="botcheck" class="hidden" style="display:none">
+            <!-- Netlify 必需的隐藏字段，name 必须与 form 的 name 一致 -->
+            <input type="hidden" name="form-name" value="contact">
+            
+            <!-- 防垃圾蜜罐字段 -->
+            <p class="hidden">
+                <label>不要填这个：<input name="bot-field"></label>
+            </p>
 
             <div class="input-row">
                 <input type="text" name="name" placeholder="你的名字（必填）" required autocomplete="off">
@@ -197,52 +199,14 @@
             
             <textarea name="message" placeholder="输入你想说的话..." required></textarea>
             
-            <button type="submit" id="submitBtn">发送留言</button>
-        </form>
-
-        <div id="result"></div>
-    </div>
-
-    <p>由Web3Forms提供支持<p/>
-
-    <script>
-        const form = document.getElementById('contactForm');
-        const result = document.getElementById('result');
-        const submitBtn = document.getElementById('submitBtn');
-
-        form.addEventListener('submit', function(e) {
-            e.preventDefault();
-            submitBtn.disabled = true;
-            submitBtn.textContent = '发送中...';
-            result.textContent = ''; // 这里清空会触发收缩
-            result.style.color = 'var(--mist)';
-
-            const formData = new FormData(form);
+            <!-- 文件上传字段 -->
+            <label style="display:block; margin-bottom: 0.5rem; font-size: 0.9rem; color: var(--gold);">
+                📎 添加附件（可选，单文件最大 8MB）
+            </label>
+            <input type="file" name="attachment">
             
-            fetch(form.action, {
-                method: 'POST',
-                body: formData
-            })
-            .then(response => response.json())
-            .then(data => {
-                if (data.success) {
-                    result.textContent = '✅ 留言已成功发送！';
-                    result.style.color = 'var(--gold)';
-                    form.reset(); 
-                } else {
-                    result.textContent = '❌ 发送失败：' + (data.message || '未知错误');
-                    result.style.color = 'var(--ember)';
-                }
-            })
-            .catch(error => {
-                result.textContent = '❌ 网络错误，请检查你的网络连接';
-                result.style.color = 'var(--ember)';
-            })
-            .finally(() => {
-                submitBtn.disabled = false;
-                submitBtn.textContent = '发送留言';
-            });
-        });
-    </script>
+            <button type="submit">发送留言</button>
+        </form>
+    </div>
 </body>
 </html>
