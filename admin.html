@@ -209,11 +209,21 @@
                     
                     // 处理附件（Netlify 的文件上传字段会返回一个数组）
                     let fileHtml = '';
-                    if (sub.data.attachment && Array.isArray(sub.data.attachment) && sub.data.attachment.length > 0) {
-                        fileHtml = sub.data.attachment.map(url => 
-                            `<a href="${url}" target="_blank" class="msg-file">📎 下载附件</a>`
-                        ).join('');
-                    }
+                    if (sub.data.attachment) {
+                        let urls = [];
+                        if (Array.isArray(sub.data.attachment)) {
+                            urls = sub.data.attachment;
+                        } else if (typeof sub.data.attachment === 'string') {
+                            urls = [sub.data.attachment];
+                        }
+    
+    if (urls.length > 0) {
+        fileHtml = urls.map(url => 
+            `<a href="${url}" target="_blank" class="msg-file">📎 下载附件</a>`
+        ).join('');
+    }
+}
+
 
                     return `
                         <div class="msg-card">
