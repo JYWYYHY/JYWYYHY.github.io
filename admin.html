@@ -1,0 +1,242 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>我的留言板</title>
+    <style>
+        /* 引入你的字体 */
+        @font-face {
+            font-family: "Cmdysj";
+            src: url("./file/cmdysj.ttf") format("truetype");
+            font-display: swap;
+        }
+
+        /* 复用你的配色变量 */
+        :root {
+            --night: #17141f;
+            --ink: #29202d;
+            --plum: #493744;
+            --mist: rgba(226, 201, 197, 0.76);
+            --mist-light: rgba(246, 225, 211, 0.88);
+            --gold: #e7ad62;
+            --ember: #bd684e;
+        }
+
+        body {
+            min-height: 100vh;
+            margin: 0;
+            padding: clamp(2rem, 7vw, 6rem) 1.25rem;
+            color: var(--mist-light);
+            text-align: center;
+            font-family: "Cmdysj", Georgia, "Noto Serif SC", serif;
+            background:
+                linear-gradient(135deg, rgba(23, 20, 31, 0.9), rgba(71, 47, 57, 0.7)),
+                url("./file/IMG_2324.webp") center / cover fixed;
+        }
+
+        body::before {
+            position: fixed;
+            inset: 0;
+            z-index: -1;
+            content: "";
+            background: radial-gradient(circle at 50% 12%, rgba(231, 173, 98, 0.16), transparent 34rem);
+            pointer-events: none;
+        }
+
+        h1 {
+            margin: 0 auto 2rem;
+            color: var(--mist-light);
+            font-size: clamp(1.8rem, 4vw, 2.5rem);
+            font-weight: 500;
+            letter-spacing: 0.08em;
+            text-shadow: 0 2px 24px rgba(9, 7, 14, 0.75);
+        }
+
+        h1 small {
+            display: block;
+            margin-top: 0.4rem;
+            color: var(--gold);
+            font-size: 0.4em;
+            letter-spacing: 0.2em;
+        }
+
+        .admin-container {
+            width: min(40rem, 90vw);
+            margin: 0 auto;
+            text-align: left;
+        }
+
+        /* 刷新按钮 */
+        .refresh-btn {
+            display: block;
+            margin: 0 auto 2rem;
+            padding: 0.6rem 2rem;
+            border: 1px solid var(--gold);
+            border-radius: 999px;
+            color: var(--ink);
+            background: var(--gold);
+            font-family: inherit;
+            font-size: 1rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .refresh-btn:hover {
+            background: #f3c985;
+            transform: translateY(-2px);
+        }
+
+        /* 留言卡片 */
+        .msg-card {
+            margin-bottom: 1.5rem;
+            padding: 1.5rem;
+            border: 1px solid rgba(231, 173, 98, 0.3);
+            border-radius: 1rem;
+            background: rgba(42, 28, 39, 0.75);
+            box-shadow: 0 0.8rem 2rem rgba(11, 8, 16, 0.4);
+            backdrop-filter: blur(0.7rem);
+            animation: contact-fade-in 500ms ease both;
+        }
+
+        @keyframes contact-fade-in {
+            from { transform: translateY(1rem); opacity: 0; }
+            to { transform: translateY(0); opacity: 1; }
+        }
+
+        .msg-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1rem;
+            padding-bottom: 0.5rem;
+            border-bottom: 1px dashed rgba(231, 173, 98, 0.2);
+        }
+
+        .msg-name {
+            font-size: 1.1rem;
+            color: var(--gold);
+            font-weight: bold;
+        }
+
+        .msg-contact {
+            font-size: 0.85rem;
+            color: var(--mist);
+            margin-left: 0.5rem;
+        }
+
+        .msg-time {
+            font-size: 0.85rem;
+            color: var(--mist);
+        }
+
+        .msg-content {
+            font-size: 1rem;
+            line-height: 1.6;
+            color: var(--mist-light);
+            white-space: pre-wrap;
+            word-break: break-word;
+        }
+
+        /* 附件下载按钮 */
+        .msg-file {
+            display: inline-block;
+            margin-top: 1.2rem;
+            padding: 0.5rem 1rem;
+            border: 1px solid rgba(231, 173, 98, 0.65);
+            border-radius: 999px;
+            color: var(--mist-light);
+            background: rgba(49, 34, 43, 0.62);
+            text-decoration: none;
+            font-size: 0.9rem;
+            transition: background 180ms ease, color 180ms ease;
+        }
+
+        .msg-file:hover {
+            color: var(--ink);
+            background: var(--gold);
+        }
+
+        .loading, .error, .empty {
+            text-align: center;
+            color: var(--mist);
+            padding: 2rem;
+            font-size: 1rem;
+        }
+        
+        .error { color: var(--ember); }
+    </style>
+</head>
+<body>
+    <h1>我的留言板<small>Inbox</small></h1>
+
+    <div class="admin-container">
+        <button class="refresh-btn" onclick="loadMessages()">刷新信件</button>
+        <div id="message-list">
+            <p class="loading">正在读取信箱...</p>
+        </div>
+    </div>
+
+    <script>
+        async function loadMessages() {
+            const listEl = document.getElementById('message-list');
+            listEl.innerHTML = '<p class="loading">正在读取信箱...</p>';
+
+            try {
+                // 调用你部署的 Netlify Function
+                const response = await fetch('/.netlify/functions/get-submissions');
+                
+                if (!response.ok) {
+                    const err = await response.json();
+                    throw new Error(err.error || '服务器响应错误');
+                }
+                
+                const submissions = await response.json();
+                
+                if (submissions.length === 0) {
+                    listEl.innerHTML = '<p class="empty">信箱空空如也，还没有人留言哦～</p>';
+                    return;
+                }
+
+                // 按时间倒序排列（最新的在最上面）
+                submissions.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+
+                listEl.innerHTML = submissions.map(sub => {
+                    const date = new Date(sub.created_at).toLocaleString('zh-CN');
+                    const name = sub.data.name || '匿名';
+                    const contact = sub.data.contact ? `<span class="msg-contact">(${sub.data.contact})</span>` : '';
+                    const message = sub.data.message || '<em>（无文字内容）</em>';
+                    
+                    // 处理附件（Netlify 的文件上传字段会返回一个数组）
+                    let fileHtml = '';
+                    if (sub.data.attachment && Array.isArray(sub.data.attachment) && sub.data.attachment.length > 0) {
+                        fileHtml = sub.data.attachment.map(url => 
+                            `<a href="${url}" target="_blank" class="msg-file">📎 下载附件</a>`
+                        ).join('');
+                    }
+
+                    return `
+                        <div class="msg-card">
+                            <div class="msg-header">
+                                <div>
+                                    <span class="msg-name">${name}</span>
+                                    ${contact}
+                                </div>
+                                <span class="msg-time">${date}</span>
+                            </div>
+                            <div class="msg-content">${message}</div>
+                            ${fileHtml}
+                        </div>
+                    `;
+                }).join('');
+                
+            } catch (error) {
+                listEl.innerHTML = `<p class="error">❌ 读取失败：${error.message}</p>`;
+            }
+        }
+
+        // 页面打开时自动加载
+        loadMessages();
+    </script>
+</body>
+</html>
