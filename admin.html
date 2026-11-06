@@ -207,23 +207,39 @@
                     const contact = sub.data.contact ? `<span class="msg-contact">(${sub.data.contact})</span>` : '';
                     const message = sub.data.message || '<em>（无文字内容）</em>';
                     
-                    // 处理附件（Netlify 的文件上传字段会返回一个数组）
+                    // 终极兼容版：处理文件对象、数组、字符串
                     let fileHtml = '';
-                    if (sub.data.attachment) {
-                        let urls = [];
-                        if (Array.isArray(sub.data.attachment)) {
-                            urls = sub.data.attachment;
-                        } else if (typeof sub.data.attachment === 'string') {
-                            urls = [sub.data.attachment];
-                        }
-    
-    if (urls.length > 0) {
-        fileHtml = urls.map(url => 
-            `<a href="${url}" target="_blank" class="msg-file">📎 下载附件</a>`
-        ).join('');
-    }
-}
+                    const attach = sub.data.attachment;
 
+                    if (attach) {
+                        let files = [];
+                        if (Array.isArray(attach)) {
+                            files = attach;
+                        } else if (typeof attach === 'object' && attach !== null) {
+                            files = [attach];
+                        } else if (typeof attach === 'string' && attach.trim() !== '') {
+                            files = [attach];
+                        }
+
+                        if (files.length > 0) {
+                            fileHtml = files.map(file => {
+                                let url = '';
+                                let fileName = '下载附件';
+                                
+                                if (typeof file === 'string') {
+                                    url = file;
+                                } else if (typeof file === 'object' && file !== null) {
+                                    url = file.url || file.path || file.download_url || '';
+                                    if (file.filename) fileName = file.filename;
+                                }
+
+                                if (url) {
+                                    return `<a href="${url}" target="_blank" class="msg-file">📎 ${fileName}</a>`;
+                                }
+                                return '';
+                            }).join('');
+                        }
+                    }
 
                     return `
                         <div class="msg-card">
