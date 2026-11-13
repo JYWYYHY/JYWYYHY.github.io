@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>洛苏音乐 · 网页版</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<header>
+  <h1>🎵 洛苏点歌 (网页版)</h1>
+  <div class="platform-tabs" id="platformTabs">
+    <button data-platform="wymusic" class="active">网易云</button>
+    <button data-platform="kgmusic">酷狗</button>
+    <button data-platform="qqmusic">QQ音乐</button>
+  </div>
+</header>
+
+<main>
+  <aside>
+    <div class="search-box">
+      <input id="keyword" type="text" placeholder="输入歌名…" onkeydown="if(event.key==='Enter')doSearch()">
+      <button onclick="doSearch()">搜索</button>
+    </div>
+    <div class="result-list" id="resultList">
+      <div class="placeholder">请输入关键词</div>
+    </div>
+  </aside>
+
+  <section class="player-area">
+    <div class="now-playing">
+      <img class="cover" id="cover" src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 48 48'%3E%3Crect fill='%23222' width='48' height='48'/%3E%3Ctext x='24' y='30' text-anchor='middle' fill='%23555' font-size='16'%3E♪%3C/text%3E%3C/svg%3E">
+      <div class="info">
+        <div class="name" id="nowName">未选择</div>
+        <div class="artist" id="nowArtist">—</div>
+      </div>
+      <button class="icon-btn" onclick="openOfficial()" id="officialBtn" disabled>🏢 前往官方下载</button>
+    </div>
+    <div class="lyric-area" id="lyricArea">
+      <div class="placeholder" style="margin-top:40px;">纯网页版不支持本地播放，请点击右上角前往官方平台试听和下载。</div>
+    </div>
+  </section>
+</main>
+
+<script src="app.js"></script>
+</body>
+</html>
