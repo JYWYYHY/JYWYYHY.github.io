@@ -1,19 +1,19 @@
-// 使用公共 CORS 代理
 const CORS_PROXY = 'https://corsproxy.io/?';
 const API_TARGET = 'https://api.luosu.top';
 const PLATFORM_ENDPOINTS = { wymusic:'/api/wymusic/index.php', kgmusic:'/api/kgmusic/index.php', qqmusic:'/api/qqmusic/index.php' };
 
-// ⚠️ 请务必填入你 corsproxy.io 后台的完整 API Key
-const API_KEY = "b0328f2d"; 
+const API_KEY = "b0328f2d"; // ⚠️ 确保这是你正确的 Key
 
 let state = { platform:'wymusic', songs:[], currentIndex:-1, lyricLines:[], lyricTimer:null };
 
 function $(id){ return document.getElementById(id); }
-function setStatus(msg, isErr) { const el=$('status'); el.textContent=msg; el.className=isErr?'err':''; }
+function setStatus(msg, isErr) { 
+  const el = $('status');
+  if (el) { el.textContent = msg; el.className = isErr ? 'err' : ''; }
+}
 function escapeHtml(s){ return String(s).replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
 function fmtTime(sec){ sec=Math.floor(Number(sec)||0); return Math.floor(sec/60) + ':' + String(sec%60).padStart(2,'0'); }
 
-/* ---------- 平台切换 ---------- */
 $('platformTabs').addEventListener('click', e => {
   const btn = e.target.closest('button'); if(!btn) return;
   document.querySelectorAll('.platform-tabs button').forEach(b => b.classList.remove('active'));
@@ -24,13 +24,14 @@ $('platformTabs').addEventListener('click', e => {
   clearLyricTimer();
 });
 
-/* ---------- 搜索 ---------- */
 async function doSearch(){
   const kw = $('keyword').value.trim(); 
   if(!kw) return;
   
   const btn = $('searchBtn');
-  btn.disabled = true;
+  // 防御性判断：防止找不到按钮报错
+  if (btn) btn.disabled = true; 
+  
   $('resultList').innerHTML = '<div class="placeholder">搜索中…</div>';
   setStatus('搜索中…');
   
@@ -38,7 +39,6 @@ async function doSearch(){
     const path = PLATFORM_ENDPOINTS[state.platform];
     const targetUrl = `${API_TARGET}${path}?ss=${encodeURIComponent(kw)}&format=json&t=20`;
     
-    // corsproxy.io 官方要求的传参方式
     const params = new URLSearchParams({ key: API_KEY, url: targetUrl });
     const res = await fetch(CORS_PROXY + params);
     if (!res.ok) throw new Error('HTTP ' + res.status);
@@ -55,7 +55,7 @@ async function doSearch(){
     $('resultList').innerHTML = `<div class="placeholder err">搜索失败：${e.message}</div>`;
     setStatus('搜索失败', true);
   } finally {
-    btn.disabled = false;
+    if (btn) btn.disabled = false;
   }
 }
 

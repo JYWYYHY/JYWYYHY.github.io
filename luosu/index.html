@@ -3,12 +3,15 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>洛苏音乐 · 网页版</title>
+<title>洛苏音乐 · 纯网页版</title>
+<!-- 内置 Base64 图标，解决 favicon 报错 -->
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🎵</text></svg>">
 <link rel="stylesheet" href="style.css">
 </head>
 <body>
+
 <header>
-  <h1>🎵 洛苏点歌 (网页版)</h1>
+  <h1>🎵 洛苏点歌 (纯网页版)</h1>
   <div class="platform-tabs" id="platformTabs">
     <button data-platform="wymusic" class="active">网易云</button>
     <button data-platform="kgmusic">酷狗</button>
@@ -20,7 +23,8 @@
   <aside>
     <div class="search-box">
       <input id="keyword" type="text" placeholder="输入歌名…" onkeydown="if(event.key==='Enter')doSearch()">
-      <button onclick="doSearch()">搜索</button>
+      <!-- 注意这里加上了 id="searchBtn" -->
+      <button onclick="doSearch()" id="searchBtn">搜索</button>
     </div>
     <div class="result-list" id="resultList">
       <div class="placeholder">请输入关键词</div>
@@ -33,11 +37,16 @@
       <div class="info">
         <div class="name" id="nowName">未选择</div>
         <div class="artist" id="nowArtist">—</div>
+        <audio id="audio" controls preload="none"></audio>
       </div>
-      <button class="icon-btn" onclick="openOfficial()" id="officialBtn" disabled>🏢 前往官方下载</button>
+      <button class="icon-btn" onclick="openOfficial()" id="officialBtn" disabled>🏢 官方下载</button>
     </div>
     <div class="lyric-area" id="lyricArea">
-      <div class="placeholder" style="margin-top:40px;">纯网页版不支持本地播放，请点击右上角前往官方平台试听和下载。</div>
+      <div class="placeholder" style="margin-top:40px;">歌词将在这里显示</div>
+    </div>
+    <div class="status-bar">
+      <span id="status">就绪</span>
+      <span>Powered by corsproxy.io</span>
     </div>
   </section>
 </main>
