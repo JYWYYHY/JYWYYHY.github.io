@@ -32,7 +32,7 @@ const PLATFORM_QUALITIES = {
 
 const API_KEY = "b0328f2d"; // ⚠️ 你的 Key
 
-const defaultSettings = { limit: '20', quality: 'higher' };
+const defaultSettings = { limit: '20', quality: 'higher', dlCover: false, dlLyric: false };
 let settings = JSON.parse(localStorage.getItem('luosu_settings')) || defaultSettings;
 
 let state = { 
@@ -78,6 +78,9 @@ function toggleSettings() {
     updateQualityOptions();
     $('setLimit').value = settings.limit;
     $('setQuality').value = settings.quality;
+    $('setDlCover').checked = settings.dlCover || false;
+    $('setDlLyric').checked = settings.dlLyric || false;
+    
     modal.classList.add('show');
   } else {
     modal.classList.remove('show');
@@ -87,9 +90,12 @@ function toggleSettings() {
 function saveSettings() {
   settings.limit = $('setLimit').value;
   settings.quality = $('setQuality').value;
+  settings.dlCover = $('setDlCover').checked;
+  settings.dlLyric = $('setDlLyric').checked;
+  
   localStorage.setItem('luosu_settings', JSON.stringify(settings));
   $('settingsModal').classList.remove('show');
-  setStatus('试听设置已保存');
+  setStatus('设置已保存');
 }
 
 /* ---------- 平台切换 ---------- */
@@ -239,6 +245,32 @@ async function selectSong(index){
 
     audio.src = playUrl;
     await audio.play();
+    // 写入系统媒体控制中心
+    if ('mediaSession' in navigator) {
+      navigator.mediaSession.metadata = new MediaMetadata({
+        title: s.name,
+        artist: s.artist,
+        album: detail.album || '未知专辑',
+        artwork: [
+          { src: $('cover').src, sizes: '96x96', type: 'image/jpeg' },
+          { src: $('cover').src, sizes: '128x128', type: 'image/jpeg' },
+          { src: $('cover').src, sizes: '192x192', type: 'image/jpeg' },
+          { src: $('cover').src, sizes: '256x256', type: 'image/jpeg' },
+          { src: $('cover').src, sizes: '384x384', type: 'image/jpeg' },
+          { src: $('cover').src, sizes: '512x512', type: 'image/jpeg' }
+        ]
+      });
+      
+      // 绑定媒体按键（比如蓝牙耳机按下一首）
+      navigator.mediaSession.setActionHandler('play', () => audio.play());
+      navigator.mediaSession.setActionHandler('pause', () => audio.pause());
+      navigator.mediaSession.setActionHandler('previoustrack', () => {
+        if (state.currentIndex > 0) selectSong(state.currentIndex - 1);
+      });
+      navigator.mediaSession.setActionHandler('nexttrack', () => {
+        if (state.currentIndex < state.songs.length - 1) selectSong(state.currentIndex + 1);
+      });
+    }
     setStatus('播放中');
     $('downloadBtn').disabled = false; // 允许点击下载
     startLyricSync(audio);
@@ -316,10 +348,42 @@ async function confirmDownload() {
 
     if (downloadUrl.startsWith('http://')) downloadUrl = downloadUrl.replace('http://', 'https://');
 
+    // 1. 提取音源（新标签页打开）
     window.open(downloadUrl, '_blank');
     
+    // 2. 如果勾选了附带歌词，生成并下载 LRC
+    if (settings.dlLyric && state.lyricLines.length > 0) {
+      const lrcText = state.lyricLines.map(l => {
+        const m = Math.floor(l.time / 60).toString().padStart(2, '0');
+        const sec = Math.floor(l.time % 60).toString().padStart(2, '0');
+        const ms = Math.floor((l.time % 1) * 100).toString().padStart(2, '0');
+        return `[${m}:${sec}.${ms}]${l.content}`;
+      }).join('\n');
+      
+      const blob = new Blob([lrcText], { type: 'text/plain;charset=utf-8' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `${s.artist} - ${s.name}.lrc`;
+      a.style.display = 'none';
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    }
+
+    // 3. 如果勾选了附带封面，新标签页打开封面（由于跨域，无法静默保存）
+    if (settings.dlCover) {
+      const pic = detail.cover_url || detail.pic || detail.albumPic || '';
+      if (pic) {
+        const httpPic = pic.startsWith('http://') ? pic.replace('http://', 'https://') : pic;
+        // 延迟一下打开，避免被浏览器拦截弹窗
+        setTimeout(() => window.open(httpPic, '_blank'), 300);
+      }
+    }
+    
     $('downloadModal').classList.remove('show');
-    setStatus(`已提取 [${yz}] 音源，请在新标签页中右键保存`);
+    setStatus(`已提取 [${yz}] 音源`);
   } catch(e) {
     setStatus('下载获取失败：' + e.message, true);
     alert('获取失败：' + e.message);
