@@ -3,27 +3,65 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>洛苏音乐 · 纯网页版</title>
-<!-- 内置 Base64 图标，解决 favicon 报错 -->
-<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🎵</text></svg>">
+<title>洛苏音乐 · 网页版</title>
+<link rel="shortcut icon" href="./../file/666.ico">
 <link rel="stylesheet" href="style.css">
 </head>
 <body>
 
 <header>
-  <h1>🎵 洛苏点歌 (纯网页版)</h1>
+  <h1>洛苏音乐</h1>
   <div class="platform-tabs" id="platformTabs">
     <button data-platform="wymusic" class="active">网易云</button>
     <button data-platform="kgmusic">酷狗</button>
     <button data-platform="qqmusic">QQ音乐</button>
   </div>
+  <button class="icon-btn" onclick="toggleSettings()" title="偏好设置">⚙️</button>
 </header>
+
+<!-- 常规设置弹窗 -->
+<div class="modal-overlay" id="settingsModal">
+  <div class="modal">
+    <h2>试听偏好</h2>
+    <div class="setting-item">
+      <label>搜索数量 (t)</label>
+      <select id="setLimit">
+        <option value="10">10 首</option>
+        <option value="20">20 首</option>
+        <option value="50">50 首</option>
+        <option value="100">100 首</option>
+      </select>
+    </div>
+    <div class="setting-item">
+      <label>在线试听音质 (yz)</label>
+      <select id="setQuality"></select>
+    </div>
+    <div class="modal-actions">
+      <button onclick="saveSettings()">保存设置</button>
+    </div>
+  </div>
+</div>
+
+<!-- 下载设置弹窗 -->
+<div class="modal-overlay" id="downloadModal">
+  <div class="modal">
+    <h2>选择下载音质</h2>
+    <p style="font-size:12px; color:var(--mist); margin-bottom:15px; text-align:center;">将重新向接口请求该音质的链接</p>
+    <div class="setting-item">
+      <label>下载音质</label>
+      <select id="downloadQualitySelect"></select>
+    </div>
+    <div class="modal-actions" style="display: flex; justify-content: space-between;">
+      <button onclick="document.getElementById('downloadModal').classList.remove('show')" style="background: transparent; border: 1px solid var(--glass-border); color: var(--mist);">取消</button>
+      <button onclick="confirmDownload()" id="confirmDownloadBtn">开始下载</button>
+    </div>
+  </div>
+</div>
 
 <main>
   <aside>
     <div class="search-box">
       <input id="keyword" type="text" placeholder="输入歌名…" onkeydown="if(event.key==='Enter')doSearch()">
-      <!-- 注意这里加上了 id="searchBtn" -->
       <button onclick="doSearch()" id="searchBtn">搜索</button>
     </div>
     <div class="result-list" id="resultList">
@@ -39,7 +77,11 @@
         <div class="artist" id="nowArtist">—</div>
         <audio id="audio" controls preload="none"></audio>
       </div>
-      <button class="icon-btn" onclick="openOfficial()" id="officialBtn" disabled>🏢 官方下载</button>
+      <div class="action-btns">
+        <!-- 文案已修改 -->
+        <button class="icon-btn" onclick="openDownloadModal()" id="downloadBtn" disabled>下载</button>
+        <button class="icon-btn" onclick="openOfficial()" id="officialBtn" disabled>官方页面</button>
+      </div>
     </div>
     <div class="lyric-area" id="lyricArea">
       <div class="placeholder" style="margin-top:40px;">歌词将在这里显示</div>
