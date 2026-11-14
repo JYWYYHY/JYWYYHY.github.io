@@ -14,6 +14,7 @@ function setStatus(msg, isErr) {
 function escapeHtml(s){ return String(s).replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
 function fmtTime(sec){ sec=Math.floor(Number(sec)||0); return Math.floor(sec/60) + ':' + String(sec%60).padStart(2,'0'); }
 
+/* ---------- 平台切换 ---------- */
 $('platformTabs').addEventListener('click', e => {
   const btn = e.target.closest('button'); if(!btn) return;
   document.querySelectorAll('.platform-tabs button').forEach(b => b.classList.remove('active'));
@@ -24,23 +25,25 @@ $('platformTabs').addEventListener('click', e => {
   clearLyricTimer();
 });
 
+/* ---------- 搜索（修复双重编码） ---------- */
 async function doSearch(){
   const kw = $('keyword').value.trim(); 
   if(!kw) return;
   
   const btn = $('searchBtn');
-  // 防御性判断：防止找不到按钮报错
   if (btn) btn.disabled = true; 
-  
   $('resultList').innerHTML = '<div class="placeholder">搜索中…</div>';
   setStatus('搜索中…');
   
   try {
     const path = PLATFORM_ENDPOINTS[state.platform];
-    const targetUrl = `${API_TARGET}${path}?ss=${encodeURIComponent(kw)}&format=json&t=20`;
+    // 这里不进行第一次 encode，直接拼接原始字符串，交给后面的 encodeURIComponent 统一处理
+    const targetUrl = `${API_TARGET}${path}?ss=${kw}&format=json&t=20`;
     
-    const params = new URLSearchParams({ key: API_KEY, url: targetUrl });
-    const res = await fetch(CORS_PROXY + params);
+    // 手动拼接，确保 corsproxy 接收到的 url 参数是正确的编码
+    const fetchUrl = CORS_PROXY + `key=${API_KEY}&url=${encodeURIComponent(targetUrl)}`;
+    
+    const res = await fetch(fetchUrl);
     if (!res.ok) throw new Error('HTTP ' + res.status);
     const json = await res.json();
     
@@ -84,7 +87,7 @@ function renderList(){
   `).join('');
 }
 
-/* ---------- 播放逻辑（纯网页版核心） ---------- */
+/* ---------- 播放逻辑（解决 Mixed Content） ---------- */
 async function selectSong(index){
   state.currentIndex = index;
   renderList();
@@ -104,14 +107,13 @@ async function selectSong(index){
   try {
     const path = PLATFORM_ENDPOINTS[state.platform];
     const keyword = s.name + (s.artist && s.artist !== '未知' ? ' ' + s.artist : '');
-    // 获取详情
-    const targetUrl = `${API_TARGET}${path}?ss=${encodeURIComponent(keyword)}&n=1&format=json`;
-    const params = new URLSearchParams({ key: API_KEY, url: targetUrl });
+    const targetUrl = `${API_TARGET}${path}?ss=${keyword}&n=1&format=json`;
     
-    const res = await fetch(CORS_PROXY + params);
+    const fetchUrl = CORS_PROXY + `key=${API_KEY}&url=${encodeURIComponent(targetUrl)}`;
+    
+    const res = await fetch(fetchUrl);
     const json = await res.json();
     
-    // 提取详情
     let detail = null;
     if (json.data && !Array.isArray(json.data) && (json.data.play_url || json.data.url)) {
       detail = json.data;
@@ -122,19 +124,24 @@ async function selectSong(index){
 
     if (!detail) throw new Error('未获取到详情');
     
-    const playUrl = detail.play_url || detail.url || detail.playUrl || detail.src || '';
+    let playUrl = detail.play_url || detail.url || detail.playUrl || detail.src || '';
     if(!playUrl) throw new Error('未获取到播放地址');
 
-    // 封面
-    const pic = detail.cover_url || detail.pic || detail.albumPic || '';
-    if(pic) $('cover').src = pic;
+    // 🔥 核心修复：将 http:// 强制替换为 https://，解决 Mixed Content
+    if (playUrl.startsWith('http://')) {
+      playUrl = playUrl.replace('http://', 'https://');
+    }
 
-    // 歌词
+    const pic = detail.cover_url || detail.pic || detail.albumPic || '';
+    if(pic) {
+      // 封面同样处理
+      $('cover').src = pic.startsWith('http://') ? pic.replace('http://', 'https://') : pic;
+    }
+
     const lyricText = detail.lyric || detail.lrc || '';
     state.lyricLines = parseLRC(lyricText);
     renderLyric();
 
-    // 直接播放直链（纯网页版不用走本地代理，直接扔给 audio）
     audio.src = playUrl;
     await audio.play();
     setStatus('播放中');
@@ -157,7 +164,7 @@ function openOfficial(){
   if(url) window.open(url, '_blank');
 }
 
-/* ---------- 歌词解析（与之前一致） ---------- */
+/* ---------- 歌词解析 ---------- */
 function parseLRC(text) {
   if (!text || typeof text !== 'string') return [];
   const lines = [];
