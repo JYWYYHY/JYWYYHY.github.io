@@ -1,0 +1,410 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>我的收藏夹</title>
+<style>
+*{box-sizing:border-box}
+:root{
+  --bg:#f6f7f9;--panel:#fff;--text:#1a1a1c;--muted:#6b7280;--border:#e6e8ec;
+  --hover:#eef1f6;--accent:#4f7cff;--accent-soft:#e8efff;
+  --shadow:0 1px 2px rgba(0,0,0,.04),0 2px 8px rgba(0,0,0,.04);
+}
+@media (prefers-color-scheme:dark){
+  :root{
+    --bg:#121316;--panel:#1b1d21;--text:#e8e9ec;--muted:#9aa0a6;--border:#2a2d33;
+    --hover:#23262c;--accent:#6b8cff;--accent-soft:#232b40;
+    --shadow:0 1px 2px rgba(0,0,0,.3);
+  }
+}
+html,body{height:100%}
+body{margin:0;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Microsoft YaHei",sans-serif;
+  background:var(--bg);color:var(--text);font-size:14px}
+button{font:inherit;color:inherit}
+.layout{display:flex;height:100vh;overflow:hidden}
+
+/* 侧栏 */
+.sidebar{width:260px;flex:none;background:var(--panel);border-right:1px solid var(--border);
+  display:flex;flex-direction:column;overflow:hidden}
+.tabs{display:flex;padding:10px 10px 0;gap:4px}
+.tabs button{flex:1;padding:8px;border:none;background:transparent;border-radius:8px;
+  cursor:pointer;color:var(--muted);font-weight:500}
+.tabs button.active{background:var(--accent-soft);color:var(--accent)}
+.tree{flex:1;overflow:auto;padding:8px}
+.node-head{display:flex;align-items:center;gap:6px;padding:6px 8px;border-radius:6px;
+  cursor:pointer;user-select:none;white-space:nowrap}
+.node-head:hover{background:var(--hover)}
+.node-head.active{background:var(--accent-soft);color:var(--accent)}
+.node-head .caret{width:14px;text-align:center;color:var(--muted);font-size:10px;transition:transform .15s}
+.node-head.collapsed .caret{transform:rotate(-90deg)}
+.node-head .label{flex:1;overflow:hidden;text-overflow:ellipsis}
+.node-head .count{color:var(--muted);font-size:12px;font-variant-numeric:tabular-nums}
+.node-children{margin-left:14px;border-left:1px dashed var(--border);padding-left:2px}
+.node-children.hidden{display:none}
+
+/* 主区 */
+.main{flex:1;display:flex;flex-direction:column;overflow:hidden}
+.topbar{display:flex;gap:10px;align-items:center;padding:12px 16px;
+  border-bottom:1px solid var(--border);background:var(--panel)}
+.search{flex:1;max-width:520px;position:relative}
+.search input{width:100%;padding:9px 12px 9px 34px;border:1px solid var(--border);
+  border-radius:10px;background:var(--bg);color:var(--text);font:inherit;outline:none}
+.search input:focus{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-soft)}
+.search .ico{position:absolute;left:11px;top:50%;transform:translateY(-50%);color:var(--muted);pointer-events:none}
+.toolbar{margin-left:auto;display:flex;gap:6px;align-items:center}
+.btn{padding:8px 12px;border:1px solid var(--border);background:var(--panel);
+  border-radius:9px;cursor:pointer;color:var(--muted);white-space:nowrap}
+.btn:hover{background:var(--hover);color:var(--text)}
+.btn.active{background:var(--accent-soft);border-color:transparent;color:var(--accent)}
+.content{flex:1;overflow:auto;padding:16px}
+.crumb{color:var(--muted);margin-bottom:12px;font-size:13px}
+.crumb b{color:var(--text);font-weight:600}
+
+/* 卡片 */
+.cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:10px}
+.card{position:relative;display:flex;gap:10px;align-items:center;padding:12px;
+  background:var(--panel);border:1px solid var(--border);border-radius:12px;
+  text-decoration:none;color:inherit;box-shadow:var(--shadow);
+  transition:transform .08s,border-color .15s}
+.card:hover{border-color:var(--accent);transform:translateY(-1px)}
+.card.highlight{border-color:var(--accent);box-shadow:0 0 0 2px var(--accent-soft)}
+.avatar{position:relative;width:34px;height:34px;flex:none;border-radius:9px;
+  display:grid;place-items:center;font-weight:700;color:#fff;overflow:hidden;
+  background:hsl(var(--h,220) 55% 52%)}
+.avatar span{font-size:15px}
+.avatar img{position:absolute;inset:0;width:100%;height:100%;object-fit:contain;
+  background:var(--panel);opacity:0;transition:opacity .2s}
+.card-body{min-width:0;flex:1;display:flex;flex-direction:column}
+.card-title{font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.card-domain{color:var(--muted);font-size:12px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.pin{position:absolute;top:5px;right:5px;width:22px;height:22px;border-radius:6px;
+  border:none;background:transparent;cursor:pointer;color:var(--muted);opacity:0;
+  display:grid;place-items:center;font-size:12px}
+.card:hover .pin,.pin.on{opacity:1}
+.pin.on{color:var(--accent)}
+
+/* 列表 */
+.list{display:flex;flex-direction:column;gap:6px}
+.list .card{border-radius:8px;padding:8px 10px}
+.list .avatar{width:24px;height:24px;border-radius:6px}
+.list .avatar span{font-size:12px}
+.list .card-domain{display:none}
+.empty{text-align:center;color:var(--muted);padding:60px 0}
+
+/* 移动端 */
+.menu-btn{display:none}
+@media (max-width:720px){
+  .sidebar{position:fixed;inset:0 auto 0 0;z-index:20;transform:translateX(-100%);
+    transition:transform .2s;box-shadow:0 0 40px rgba(0,0,0,.3)}
+  .sidebar.open{transform:none}
+  .menu-btn{display:inline-block}
+  .scrim{position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:15;display:none}
+  .scrim.show{display:block}
+}
+</style>
+</head>
+<body>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <div class="tabs">
+      <button data-axis="folder" class="active">文件夹</button>
+      <button data-axis="domain">域名</button>
+    </div>
+    <div class="tree" id="tree"></div>
+  </aside>
+  <div class="scrim" id="scrim"></div>
+  <main class="main">
+    <div class="topbar">
+      <button class="btn menu-btn" id="menuBtn">☰</button>
+      <div class="search">
+        <span class="ico">🔍</span>
+        <input id="search" type="search" placeholder="搜索标题 / URL / 域名…（/ 聚焦）" autocomplete="off">
+      </div>
+      <div class="toolbar">
+        <button class="btn active" data-view="card">卡片</button>
+        <button class="btn" data-view="list">列表</button>
+      </div>
+    </div>
+    <div class="content" id="content"></div>
+  </main>
+</div>
+
+<script src="data.js"></script>
+<script>
+(function () {
+  "use strict";
+
+  const DATA = window.BOOKMARKS || { generated: "", items: [] };
+  const ALL = (DATA.items || []).map(it => Object.assign({ path: [], title: "", url: "" }, it));
+  const $ = s => document.querySelector(s);
+  const escapeHtml = s => String(s == null ? "" : s).replace(/[&<>"']/g,
+    c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+
+  function domainOf(url) {
+    try { return new URL(url).hostname.replace(/^www\./, ""); }
+    catch { return ""; }
+  }
+  function hashHue(s) {
+    let h = 0;
+    for (let i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) >>> 0;
+    return h % 360;
+  }
+
+  /* 置顶 */
+  const PIN_KEY = "bookmarks.pinned.v1";
+  let pinned = new Set();
+  try { pinned = new Set(JSON.parse(localStorage.getItem(PIN_KEY) || "[]")); } catch (e) {}
+  const savePinned = () => localStorage.setItem(PIN_KEY, JSON.stringify([...pinned]));
+
+  const state = { axis: "folder", folder: null, domain: null, search: "", view: "card", highlight: -1 };
+
+  /* 文件夹树 */
+  function buildTree(items) {
+    const root = { name: "全部", children: {}, items: [], count: 0, isRoot: true };
+    for (const it of items) {
+      let node = root;
+      node.count++;
+      for (const seg of (it.path || [])) {
+        if (!node.children[seg]) node.children[seg] = { name: seg, children: {}, items: [], count: 0 };
+        node = node.children[seg];
+        node.count++;
+      }
+      node.items.push(it);
+    }
+    return root;
+  }
+  const ROOT = buildTree(ALL);
+
+  function collectItems(node) {
+    const out = node.items.slice();
+    for (const k in node.children) out.push(...collectItems(node.children[k]));
+    return out;
+  }
+
+  /* 域名分组 */
+  const DOMAINS = (() => {
+    const map = new Map();
+    for (const it of ALL) {
+      const d = domainOf(it.url) || "其他";
+      if (!map.has(d)) map.set(d, []);
+      map.get(d).push(it);
+    }
+    return [...map.entries()].sort((a, b) => b[1].length - a[1].length);
+  })();
+
+  /* 侧栏渲染 */
+  function renderTree() {
+    const tree = $("#tree");
+    const scrollTop = tree.scrollTop;
+    tree.innerHTML = "";
+    if (state.axis === "folder") {
+      tree.appendChild(renderFolderNode(ROOT));
+    } else {
+      tree.appendChild(makeHead("🌐 全部域名", ALL.length, state.domain === null, () => {
+        state.domain = null; render();
+      }));
+      for (const [d, list] of DOMAINS) {
+        tree.appendChild(makeHead("🌐 " + d, list.length, state.domain === d, () => {
+          state.domain = d; render();
+        }));
+      }
+    }
+    tree.scrollTop = scrollTop;
+  }
+
+  function makeHead(label, count, active, onClick) {
+    const div = document.createElement("div");
+    div.className = "node-head" + (active ? " active" : "");
+    div.innerHTML = `<span class="caret"></span><span class="label">${escapeHtml(label)}</span><span class="count">${count}</span>`;
+    div.addEventListener("click", onClick);
+    return div;
+  }
+
+  function renderFolderNode(node) {
+    const hasChildren = Object.keys(node.children).length > 0;
+    const isActive = (node.isRoot && state.folder === null) || (!node.isRoot && state.folder === node);
+
+    const wrap = document.createElement("div");
+    const head = document.createElement("div");
+    head.className = "node-head" + (isActive ? " active" : "") + (node.collapsed ? " collapsed" : "");
+    head.innerHTML = `<span class="caret">${hasChildren ? "▼" : ""}</span>
+      <span class="label">${node.isRoot ? "📁 全部" : "📁 " + escapeHtml(node.name)}</span>
+      <span class="count">${node.count}</span>`;
+
+    const children = document.createElement("div");
+    children.className = "node-children" + (node.collapsed ? " hidden" : "");
+    for (const key of Object.keys(node.children).sort()) {
+      children.appendChild(renderFolderNode(node.children[key]));
+    }
+
+    head.addEventListener("click", e => {
+      if (e.target.classList.contains("caret") && hasChildren) {
+        node.collapsed = !node.collapsed;
+        head.classList.toggle("collapsed", node.collapsed);
+        children.classList.toggle("hidden", node.collapsed);
+        e.stopPropagation();
+        return;
+      }
+      state.folder = node.isRoot ? null : node;
+      render();
+    });
+
+    wrap.appendChild(head);
+    wrap.appendChild(children);
+    return wrap;
+  }
+
+  /* 当前 items */
+  function currentItems() {
+    let items = ALL;
+    if (state.axis === "folder") {
+      items = state.folder ? collectItems(state.folder) : ALL;
+    } else if (state.axis === "domain") {
+      items = state.domain === null ? ALL : ALL.filter(it => (domainOf(it.url) || "其他") === state.domain);
+    }
+    const q = state.search.trim().toLowerCase();
+    if (q) {
+      items = items.filter(it =>
+        (it.title || "").toLowerCase().includes(q) ||
+        (it.url || "").toLowerCase().includes(q) ||
+        domainOf(it.url).toLowerCase().includes(q));
+    }
+    return items.map((it, i) => ({ it, i }))
+      .sort((a, b) => {
+        const pa = pinned.has(a.it.url) ? 0 : 1;
+        const pb = pinned.has(b.it.url) ? 0 : 1;
+        return pa - pb || a.i - b.i;
+      })
+      .map(x => x.it);
+  }
+
+  /* 主渲染 */
+  function render() {
+    state.highlight = -1;
+    renderTree();
+    const items = currentItems();
+    const content = $("#content");
+
+    const crumb = [];
+    if (state.axis === "folder") {
+      crumb.push("文件夹");
+      crumb.push(state.folder ? state.folder.name : "全部");
+    } else {
+      crumb.push("域名");
+      crumb.push(state.domain === null ? "全部" : state.domain);
+    }
+    if (state.search) crumb.push("搜索: " + state.search);
+    const crumbHtml = crumb.map(escapeHtml).join(" / ") + ` / <b>${items.length}</b> 条`;
+
+    let html = `<div class="crumb">${crumbHtml}</div>`;
+    if (!items.length) {
+      html += `<div class="empty">没有匹配的收藏</div>`;
+      content.innerHTML = html;
+      return;
+    }
+    html += `<div class="${state.view === "list" ? "list" : "cards"}" id="grid">`;
+    for (const it of items) html += cardHtml(it);
+    html += `</div>`;
+    content.innerHTML = html;
+
+    document.querySelectorAll(".pin").forEach(btn => {
+      btn.addEventListener("click", e => {
+        e.preventDefault();
+        e.stopPropagation();
+        const url = btn.dataset.pin;
+        if (pinned.has(url)) pinned.delete(url); else pinned.add(url);
+        savePinned();
+        render();
+      });
+    });
+  }
+
+  function cardHtml(it) {
+    const d = domainOf(it.url);
+    const h = hashHue(d || it.title);
+    const letter = (it.title || d || "?").trim().charAt(0).toUpperCase();
+    const fav = d ? `https://www.google.com/s2/favicons?domain=${encodeURIComponent(d)}&sz=64` : "";
+    return `<a class="card" href="${escapeHtml(it.url)}" target="_blank" rel="noopener noreferrer">
+      <span class="avatar" style="--h:${h}">
+        <span>${escapeHtml(letter)}</span>
+        ${fav ? `<img src="${fav}" loading="lazy" alt="" onload="this.style.opacity=1" onerror="this.remove()">` : ""}
+      </span>
+      <span class="card-body">
+        <span class="card-title">${escapeHtml(it.title || it.url)}</span>
+        <span class="card-domain">${escapeHtml(d || it.url)}</span>
+      </span>
+      <button class="pin${pinned.has(it.url) ? " on" : ""}" title="置顶" data-pin="${escapeHtml(it.url)}">📌</button>
+    </a>`;
+  }
+
+  /* 交互 */
+  document.querySelectorAll(".tabs button").forEach(btn => {
+    btn.addEventListener("click", () => {
+      document.querySelectorAll(".tabs button").forEach(b => b.classList.toggle("active", b === btn));
+      state.axis = btn.dataset.axis;
+      if (state.axis === "folder") state.domain = null; else state.folder = null;
+      render();
+    });
+  });
+
+  document.querySelectorAll("[data-view]").forEach(btn => {
+    btn.addEventListener("click", () => {
+      document.querySelectorAll("[data-view]").forEach(b => b.classList.toggle("active", b === btn));
+      state.view = btn.dataset.view;
+      render();
+    });
+  });
+
+  const searchInput = $("#search");
+  let timer;
+  searchInput.addEventListener("input", () => {
+    clearTimeout(timer);
+    timer = setTimeout(() => { state.search = searchInput.value; render(); }, 120);
+  });
+
+  $("#menuBtn").addEventListener("click", () => {
+    $("#sidebar").classList.add("open");
+    $("#scrim").classList.add("show");
+  });
+  $("#scrim").addEventListener("click", () => {
+    $("#sidebar").classList.remove("open");
+    $("#scrim").classList.remove("show");
+  });
+
+  document.addEventListener("keydown", e => {
+    const inInput = e.target.matches("input,textarea");
+    if (e.key === "/" && !inInput) {
+      e.preventDefault();
+      searchInput.focus();
+      searchInput.select();
+      return;
+    }
+    if (e.key === "Escape" && inInput) {
+      searchInput.value = "";
+      state.search = "";
+      searchInput.blur();
+      render();
+      return;
+    }
+    if (e.key === "ArrowDown" || e.key === "ArrowUp") {
+      const cards = [...document.querySelectorAll(".card")];
+      if (!cards.length) return;
+      e.preventDefault();
+      state.highlight = state.highlight < 0 ? 0 :
+        (state.highlight + (e.key === "ArrowDown" ? 1 : -1) + cards.length) % cards.length;
+      cards.forEach((c, i) => c.classList.toggle("highlight", i === state.highlight));
+      cards[state.highlight].scrollIntoView({ block: "nearest" });
+      return;
+    }
+    if (e.key === "Enter" && state.highlight >= 0 && !inInput) {
+      const card = document.querySelectorAll(".card")[state.highlight];
+      if (card) { e.preventDefault(); card.click(); }
+    }
+  });
+
+  render();
+})();
+</script>
+</body>
+</html>

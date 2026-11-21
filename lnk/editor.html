@@ -1,0 +1,223 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>收藏夹编辑器</title>
+<style>
+*{box-sizing:border-box}
+:root{
+  --bg:#f6f7f9;--panel:#fff;--text:#1a1a1c;--muted:#6b7280;--border:#e6e8ec;
+  --hover:#eef1f6;--accent:#4f7cff;--accent-soft:#e8efff;--danger:#e5484d;
+}
+@media (prefers-color-scheme:dark){
+  :root{
+    --bg:#121316;--panel:#1b1d21;--text:#e8e9ec;--muted:#9aa0a6;--border:#2a2d33;
+    --hover:#23262c;--accent:#6b8cff;--accent-soft:#232b40;--danger:#ff6369;
+  }
+}
+body{margin:0;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Microsoft YaHei",sans-serif;
+  background:var(--bg);color:var(--text);font-size:14px}
+button,input{font:inherit;color:inherit}
+.bar{display:flex;gap:10px;align-items:center;padding:12px 16px;background:var(--panel);
+  border-bottom:1px solid var(--border);flex-wrap:wrap;position:sticky;top:0;z-index:5}
+.bar strong{font-size:15px}
+.stat{color:var(--muted);font-size:13px}
+.bar input[type=search]{flex:1;max-width:300px;padding:8px 12px;border:1px solid var(--border);
+  border-radius:9px;background:var(--bg);outline:none}
+.bar input:focus{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-soft)}
+.spacer{margin-left:auto}
+.btn{padding:8px 12px;border:1px solid var(--border);background:var(--panel);border-radius:9px;
+  cursor:pointer;color:var(--muted);white-space:nowrap;user-select:none}
+.btn:hover{background:var(--hover);color:var(--text)}
+.btn.primary{background:var(--accent);border-color:transparent;color:#fff}
+.btn.primary:hover{filter:brightness(1.05)}
+main{padding:14px 16px;max-width:1200px;margin:0 auto}
+.row{display:grid;grid-template-columns:1.2fr 2fr 1.2fr 40px;gap:8px;padding:5px 0;align-items:center}
+.row input{width:100%;padding:7px 10px;border:1px solid var(--border);border-radius:8px;
+  background:var(--panel);outline:none}
+.row input:focus{border-color:var(--accent);box-shadow:0 0 0 2px var(--accent-soft)}
+.row .f-url{font-family:ui-monospace,Consolas,monospace;font-size:12.5px}
+.row .del{width:32px;height:32px;border:none;background:transparent;border-radius:8px;
+  cursor:pointer;color:var(--muted);font-size:15px}
+.row .del:hover{background:var(--accent-soft);color:var(--danger)}
+#toast{position:fixed;left:50%;bottom:30px;transform:translateX(-50%) translateY(20px);
+  background:#000d;color:#fff;padding:10px 18px;border-radius:10px;opacity:0;
+  pointer-events:none;transition:.25s;font-size:13px;z-index:99}
+#toast.show{opacity:1;transform:translateX(-50%)}
+.hint{color:var(--muted);font-size:12px;margin:8px 0 14px}
+</style>
+</head>
+<body>
+<div class="bar">
+  <strong>收藏夹编辑器</strong>
+  <span class="stat" id="stat"></span>
+  <input id="filter" type="search" placeholder="过滤列表…">
+  <span class="spacer"></span>
+  <button class="btn" id="addBtn">＋ 新增</button>
+  <label class="btn">📥 导入 .url 目录<input id="importDir" type="file" webkitdirectory multiple hidden></label>
+  <button class="btn primary" id="saveBtn">💾 保存到 data.js</button>
+</div>
+<main>
+  <div class="hint">修改会实时反映在内存中，点击右上角「保存到 data.js」写回文件。导入目录时按 URL 自动去重。</div>
+  <div id="rows"></div>
+</main>
+<div id="toast"></div>
+
+<script src="data.js"></script>
+<script>
+(function () {
+  "use strict";
+
+  const DATA = window.BOOKMARKS || { generated: "", items: [] };
+  const items = (DATA.items || []).map(it => Object.assign({}, it, { path: it.path || [] }));
+  const $ = s => document.querySelector(s);
+  const escapeAttr = s => String(s == null ? "" : s)
+    .replace(/&/g, "&amp;").replace(/"/g, "&quot;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+  const uid = () => (crypto.randomUUID ? crypto.randomUUID()
+    : "id-" + Date.now() + "-" + Math.random().toString(36).slice(2, 8));
+
+  const rowsEl = $("#rows");
+  const filterInput = $("#filter");
+  const statEl = $("#stat");
+
+  function render() {
+    const f = filterInput.value.trim().toLowerCase();
+    let html = "";
+    items.forEach((it, idx) => {
+      const pathStr = (it.path || []).join("/");
+      if (f) {
+        const hay = ((it.title || "") + " " + (it.url || "") + " " + pathStr).toLowerCase();
+        if (!hay.includes(f)) return;
+      }
+      html += `<div class="row" data-idx="${idx}">
+        <input class="f-title" value="${escapeAttr(it.title)}" placeholder="标题">
+        <input class="f-url" value="${escapeAttr(it.url)}" placeholder="https://…">
+        <input class="f-path" value="${escapeAttr(pathStr)}" placeholder="目录/子目录">
+        <button class="del" title="删除">✕</button>
+      </div>`;
+    });
+    rowsEl.innerHTML = html || `<div class="hint">暂无数据。点「导入 .url 目录」或「新增」。</div>`;
+    statEl.textContent = items.length + " 条";
+  }
+
+  rowsEl.addEventListener("input", e => {
+    const row = e.target.closest(".row");
+    if (!row) return;
+    const it = items[+row.dataset.idx];
+    if (!it) return;
+    if (e.target.classList.contains("f-title")) it.title = e.target.value;
+    else if (e.target.classList.contains("f-url")) it.url = e.target.value;
+    else if (e.target.classList.contains("f-path")) {
+      it.path = e.target.value.split("/").map(s => s.trim()).filter(Boolean);
+    }
+  });
+
+  rowsEl.addEventListener("click", e => {
+    if (!e.target.classList.contains("del")) return;
+    const row = e.target.closest(".row");
+    const idx = +row.dataset.idx;
+    const it = items[idx];
+    if (!it) return;
+    if (!confirm("删除「" + (it.title || it.url) + "」？")) return;
+    items.splice(idx, 1);
+    render();
+  });
+
+  filterInput.addEventListener("input", render);
+
+  $("#addBtn").addEventListener("click", () => {
+    items.unshift({ id: uid(), title: "", url: "https://", path: [] });
+    filterInput.value = "";
+    render();
+    const first = document.querySelector(".row .f-title");
+    if (first) { first.focus(); first.select(); }
+  });
+
+  /* 从 .url 目录导入合并 */
+  $("#importDir").addEventListener("change", async e => {
+    const files = [...e.target.files];
+    e.target.value = "";
+    if (!files.length) return;
+    const existing = new Set(items.map(i => (i.url || "").trim()));
+    let added = 0, dup = 0, bad = 0;
+    for (const file of files) {
+      if (!/\.url$/i.test(file.name)) continue;
+      let text;
+      try { text = await file.text(); } catch { bad++; continue; }
+      const m = text.match(/^\s*URL\s*=\s*(.+)$/im);
+      if (!m) { bad++; continue; }
+      const url = m[1].trim();
+      if (existing.has(url)) { dup++; continue; }
+      existing.add(url);
+      const segs = (file.webkitRelativePath || "").split("/").filter(Boolean);
+      const pathParts = segs.slice(1, -1); // 去掉根目录名和文件名
+      items.push({
+        id: uid(),
+        title: file.name.replace(/\.url$/i, ""),
+        url,
+        path: pathParts,
+      });
+      added++;
+    }
+    render();
+    toast(`导入完成：新增 ${added}，跳过重复 ${dup}${bad ? "，无法解析 " + bad : ""}`);
+  });
+
+  /* 保存 */
+  $("#saveBtn").addEventListener("click", save);
+
+  async function save() {
+    const clean = items
+      .filter(it => (it.url || "").trim())
+      .map(it => ({
+        id: it.id || uid(),
+        title: (it.title || "").trim() || it.url,
+        url: it.url.trim(),
+        path: (it.path || []).filter(Boolean),
+      }));
+    const data = { generated: new Date().toISOString().slice(0, 10), items: clean };
+    const js = "window.BOOKMARKS = " + JSON.stringify(data, null, 2) + ";\n";
+
+    if (window.showSaveFilePicker) {
+      try {
+        const handle = await window.showSaveFilePicker({
+          suggestedName: "data.js",
+          types: [{ description: "JavaScript", accept: { "text/javascript": [".js"] } }],
+        });
+        const w = await handle.createWritable();
+        await w.write(js);
+        await w.close();
+        toast("已写回 data.js");
+        return;
+      } catch (err) {
+        if (err && err.name === "AbortError") return;
+        console.warn(err);
+      }
+    }
+    // 降级：下载
+    const blob = new Blob([js], { type: "text/javascript" });
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(blob);
+    a.download = "data.js";
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    setTimeout(() => URL.revokeObjectURL(a.href), 1500);
+    toast("已下载 data.js，请替换项目中的原文件");
+  }
+
+  let toastTimer;
+  function toast(msg) {
+    const t = $("#toast");
+    t.textContent = msg;
+    t.classList.add("show");
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => t.classList.remove("show"), 2400);
+  }
+
+  render();
+})();
+</script>
+</body>
+</html>
