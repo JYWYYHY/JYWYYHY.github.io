@@ -324,7 +324,7 @@ button{font:inherit;color:inherit}
     const d = domainOf(it.url);
     const h = hashHue(d || it.title);
     const letter = (it.title || d || "?").trim().charAt(0).toUpperCase();
-    const fav = d ? `https://www.google.com/s2/favicons?domain=${encodeURIComponent(d)}&sz=64` : "";
+    const fav = d ? `https://a.favicon.im/${encodeURIComponent(d)}?throw-error-on-404=true` : "";
     return `<a class="card" href="${escapeHtml(it.url)}" target="_blank" rel="noopener noreferrer">
       <span class="avatar" style="--h:${h}">
         <span>${escapeHtml(letter)}</span>
