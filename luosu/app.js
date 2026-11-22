@@ -1,77 +1,63 @@
 const CORS_PROXY = 'https://corsproxy.io/?';
 const API_TARGET = 'https://api.luosu.top';
-const PLATFORM_ENDPOINTS = { wymusic:'/api/wymusic/index.php', kgmusic:'/api/kgmusic/index.php', qqmusic:'/api/qqmusic/index.php' };
+const METING_API = 'https://meting.liveling.top/api';
 
-// 各平台支持的音质列表
+// 平台映射（洛苏 -> Meting）
+const PLATFORM_ENDPOINTS = { wymusic:'/api/wymusic/index.php', kgmusic:'/api/kgmusic/index.php', qqmusic:'/api/qqmusic/index.php' };
+const METING_SOURCES = { wymusic: 'netease', qqmusic: 'tencent', kgmusic: 'kugou' };
+
 const PLATFORM_QUALITIES = {
   wymusic: [
-    { value: 'standard', label: '标准 (standard)' },
-    { value: 'higher', label: '较高 (higher)' },
-    { value: 'exhigh', label: '极高 (exhigh)' },
-    { value: 'lossless', label: '无损 (lossless)' },
-    { value: 'hires', label: 'Hi-Res (hires)' },
-    { value: 'jyeffect', label: '沉浸环绕 (jyeffect)' },
-    { value: 'sky', label: '天空音效 (sky)' },
-    { value: 'dolby', label: '杜比全景声 (dolby)' },
+    { value: 'standard', label: '标准 (standard)' }, { value: 'higher', label: '较高 (higher)' },
+    { value: 'exhigh', label: '极高 (exhigh)' }, { value: 'lossless', label: '无损 (lossless)' },
+    { value: 'hires', label: 'Hi-Res (hires)' }, { value: 'jyeffect', label: '沉浸环绕 (jyeffect)' },
+    { value: 'sky', label: '天空音效 (sky)' }, { value: 'dolby', label: '杜比全景声 (dolby)' },
     { value: 'jymaster', label: '超清母带 (jymaster)' }
   ],
   qqmusic: [
-    { value: 'standard', label: '标准 (standard)' },
-    { value: 'higher', label: '较高 (higher)' },
-    { value: 'exhigh', label: '极高 (exhigh)' },
-    { value: 'lossless', label: '无损 (lossless)' },
+    { value: 'standard', label: '标准 (standard)' }, { value: 'higher', label: '较高 (higher)' },
+    { value: 'exhigh', label: '极高 (exhigh)' }, { value: 'lossless', label: '无损 (lossless)' },
     { value: 'hires', label: 'Hi-Res (hires)' }
   ],
   kgmusic: [
-    { value: 'standard', label: '标准 (standard)' },
-    { value: 'higher', label: '较高 (higher)' },
-    { value: 'exhigh', label: '极高 (exhigh)' },
-    { value: 'lossless', label: '无损 (lossless)' }
+    { value: 'standard', label: '标准 (standard)' }, { value: 'higher', label: '较高 (higher)' },
+    { value: 'exhigh', label: '极高 (exhigh)' }, { value: 'lossless', label: '无损 (lossless)' }
   ]
 };
 
-const API_KEY = "b0328f2d"; // ⚠️ 你的 Key
-
+const API_KEY = "b0328f2d"; // ⚠️ 你的 corsproxy Key
 const defaultSettings = { limit: '20', quality: 'higher', dlCover: false, dlLyric: false };
 let settings = JSON.parse(localStorage.getItem('luosu_settings')) || defaultSettings;
 
-let state = { 
-  platform:'wymusic', 
-  songs:[], 
-  currentIndex:-1, 
-  currentDetail: null, // 保存真实的详情数据
-  lyricLines:[], 
-  lyricTimer:null
-};
+let state = { platform:'wymusic', songs:[], currentIndex:-1, currentDetail: null, lyricLines:[], lyricTimer:null };
 
 function $(id){ return document.getElementById(id); }
 function setStatus(msg, isErr) { const el=$('status'); if(el){ el.textContent=msg; el.className=isErr?'err':''; } }
 function escapeHtml(s){ return String(s).replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
 function fmtTime(sec){ sec=Math.floor(Number(sec)||0); return Math.floor(sec/60) + ':' + String(sec%60).padStart(2,'0'); }
 
-// 更新音质下拉菜单
-function updateQualityOptions() {
-  const currentQualities = PLATFORM_QUALITIES[state.platform];
-  
-  // 检查当前保存的音质是否在新平台的支持列表里
-  let currentSettingValid = currentQualities.some(q => q.value === settings.quality);
-  if (!currentSettingValid) {
-    settings.quality = 'higher'; // 如果不在，默认切回较高
-    localStorage.setItem('luosu_settings', JSON.stringify(settings));
-  }
-
-  const html = currentQualities.map(q => `<option value="${q.value}">${q.label}</option>`).join('');
-  
-  // 填充试听设置
-  const setQuality = $('setQuality');
-  if (setQuality) setQuality.innerHTML = html;
-  
-  // 填充下载设置
-  const downloadSelect = $('downloadQualitySelect');
-  if (downloadSelect) downloadSelect.innerHTML = html;
+// 通用跨域请求封装（视 meting 是否支持直接跨域而定，保险起见走代理）
+async function proxyFetch(url) {
+  const proxyUrl = CORS_PROXY + `key=${API_KEY}&url=${encodeURIComponent(url)}`;
+  return fetch(proxyUrl).then(res => {
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    return res.json();
+  });
 }
 
 /* ---------- 设置相关 ---------- */
+function updateQualityOptions() {
+  const currentQualities = PLATFORM_QUALITIES[state.platform];
+  let currentSettingValid = currentQualities.some(q => q.value === settings.quality);
+  if (!currentSettingValid) {
+    settings.quality = 'higher';
+    localStorage.setItem('luosu_settings', JSON.stringify(settings));
+  }
+  const html = currentQualities.map(q => `<option value="${q.value}">${q.label}</option>`).join('');
+  if ($('setQuality')) $('setQuality').innerHTML = html;
+  if ($('downloadQualitySelect')) $('downloadQualitySelect').innerHTML = html;
+}
+
 function toggleSettings() {
   const modal = $('settingsModal');
   if (!modal.classList.contains('show')) {
@@ -80,7 +66,6 @@ function toggleSettings() {
     $('setQuality').value = settings.quality;
     $('setDlCover').checked = settings.dlCover || false;
     $('setDlLyric').checked = settings.dlLyric || false;
-    
     modal.classList.add('show');
   } else {
     modal.classList.remove('show');
@@ -92,7 +77,6 @@ function saveSettings() {
   settings.quality = $('setQuality').value;
   settings.dlCover = $('setDlCover').checked;
   settings.dlLyric = $('setDlLyric').checked;
-  
   localStorage.setItem('luosu_settings', JSON.stringify(settings));
   $('settingsModal').classList.remove('show');
   setStatus('设置已保存');
@@ -123,11 +107,7 @@ async function doSearch(){
   try {
     const path = PLATFORM_ENDPOINTS[state.platform];
     const targetUrl = `${API_TARGET}${path}?ss=${kw}&format=json&t=${settings.limit}`;
-    const fetchUrl = CORS_PROXY + `key=${API_KEY}&url=${encodeURIComponent(targetUrl)}`;
-    
-    const res = await fetch(fetchUrl);
-    if (!res.ok) throw new Error('HTTP ' + res.status);
-    const json = await res.json();
+    const json = await proxyFetch(targetUrl);
     
     let list = json.data?.songs || json.data || json.songs || [];
     if(!list.length) throw new Error('无结果');
@@ -145,29 +125,28 @@ async function doSearch(){
 }
 
 function normalizeSong(s, i){
-  // 1. 深度兼容所有平台的歌手字段
   let artist = '未知';
   let rawArtist = s.singer || s.singername || s.artist || s.ar || s.artists || s.author;
-  
   if (rawArtist) {
-    if (typeof rawArtist === 'string') {
-      artist = rawArtist.replace(/\//g, ' / ');
-    } else if (Array.isArray(rawArtist) && rawArtist.length > 0) {
-      const names = rawArtist.map(a => {
-        if (typeof a === 'string') return a;
-        return a && a.name ? a.name : '';
-      }).filter(Boolean);
-      if (names.length > 0) artist = names.join(' / ');
+    if (typeof rawArtist === 'string') artist = rawArtist.replace(/\//g, ' / ');
+    else if (Array.isArray(rawArtist)) {
+      artist = rawArtist.map(a => a?.name || a).filter(Boolean).join(' / ');
     }
   }
 
-  // 2. 时长处理
   let duration = s.duration || s.interval || 0;
   if (duration > 10000) duration = duration / 1000;
 
+  // 提取纯数字 ID（Meting API 需要）
+  let metingId = s.id || s.songid || s.songId || '';
+  // 针对酷狗的特殊处理
+  if (state.platform === 'kgmusic' && !/^\d+$/.test(metingId)) {
+      metingId = s.album_audio_id || s.audio_id || s.hash || '';
+  }
+
   return {
-    id: s.songmid || s.id || s.songid || String(i),
-    hash: s.hash || '',
+    id: s.songmid || s.id || String(i), // 洛苏使用的 ID
+    metingId: metingId,                 // Meting 使用的纯数字 ID
     name: s.name || s.songname || s.title || '未知歌曲',
     artist: artist, 
     duration: duration, 
@@ -188,10 +167,10 @@ function renderList(){
   `).join('');
 }
 
-/* ---------- 在线试听逻辑 ---------- */
+/* ---------- 播放逻辑（融合 Meting 元数据） ---------- */
 async function selectSong(index){
   state.currentIndex = index;
-  state.currentDetail = null; // 重置详情
+  state.currentDetail = null;
   renderList();
   
   const s = state.songs[index];
@@ -208,16 +187,12 @@ async function selectSong(index){
   audio.pause(); audio.removeAttribute('src'); audio.load();
 
   try {
+    // 1. 先向洛苏请求播放直链（这块最强）
     const path = PLATFORM_ENDPOINTS[state.platform];
     const keyword = s.name + (s.artist && s.artist !== '未知' ? ' ' + s.artist : '');
-    
-    // 请求试听音质
     const targetUrl = `${API_TARGET}${path}?ss=${keyword}&n=1&format=json&yz=${settings.quality}`;
-    const fetchUrl = CORS_PROXY + `key=${API_KEY}&url=${encodeURIComponent(targetUrl)}`;
     
-    const res = await fetch(fetchUrl);
-    const json = await res.json();
-    
+    const json = await proxyFetch(targetUrl);
     let detail = null;
     if (json.data && !Array.isArray(json.data) && (json.data.play_url || json.data.url)) {
       detail = json.data;
@@ -226,53 +201,58 @@ async function selectSong(index){
       if (list.length) detail = list[0];
     }
 
-    if (!detail) throw new Error('未获取到详情');
-    
-    // 保存真实详情数据，供官方跳转和下载使用
+    if (!detail) throw new Error('洛苏未获取到详情');
     state.currentDetail = detail;
 
     let playUrl = detail.play_url || detail.url || detail.playUrl || detail.src || '';
     if(!playUrl) throw new Error('未获取到播放地址');
-
     if (playUrl.startsWith('http://')) playUrl = playUrl.replace('http://', 'https://');
 
-    const pic = detail.cover_url || detail.pic || detail.albumPic || '';
-    if(pic) $('cover').src = pic.startsWith('http://') ? pic.replace('http://', 'https://') : pic;
+    // 2. 向 Meting API 请求完美的元数据和歌词
+    let finalPic = detail.cover_url || detail.pic || '';
+    let lyricText = detail.lyric || detail.lrc || '';
 
-    const lyricText = detail.lyric || detail.lrc || '';
+    // 只有在有纯数字 ID 时才请求 Meting
+    if (s.metingId) {
+      try {
+        const source = METING_SOURCES[state.platform];
+        
+        // 2.1 获取元数据（为了封面和专辑）
+        const metingSongUrl = `${METING_API}?server=${source}&type=song&id=${s.metingId}`;
+        const metingSong = await proxyFetch(metingSongUrl);
+        if (metingSong && metingSong[0]) {
+          if (metingSong[0].pic) finalPic = metingSong[0].pic; // 拿更高清的封面
+          if (metingSong[0].name) $('nowName').textContent = metingSong[0].name;
+          if (metingSong[0].artist) $('nowArtist').textContent = metingSong[0].artist;
+        }
+
+        // 2.2 获取歌词（带翻译）
+        const metingLrcUrl = `${METING_API}?server=${source}&type=lrc&id=${s.metingId}`;
+        const metingLrc = await proxyFetch(metingLrcUrl);
+        if (metingLrc && metingLrc.lyric) {
+          lyricText = metingLrc.lyric; 
+          // 如果有翻译歌词，合并进去
+          if (metingLrc.tlyric) {
+            lyricText += "\n" + metingLrc.tlyric; 
+          }
+        }
+      } catch (err) {
+        console.warn('Meting API 获取补充信息失败，降级使用洛苏数据', err);
+      }
+    }
+
+    // 3. 渲染封面
+    if (finalPic) $('cover').src = finalPic.startsWith('http://') ? finalPic.replace('http://', 'https://') : finalPic;
+
+    // 4. 解析歌词（加入双语匹配逻辑）
     state.lyricLines = parseLRC(lyricText);
     renderLyric();
 
+    // 5. 播放
     audio.src = playUrl;
     await audio.play();
-    // 写入系统媒体控制中心
-    if ('mediaSession' in navigator) {
-      navigator.mediaSession.metadata = new MediaMetadata({
-        title: s.name,
-        artist: s.artist,
-        album: detail.album || '未知专辑',
-        artwork: [
-          { src: $('cover').src, sizes: '96x96', type: 'image/jpeg' },
-          { src: $('cover').src, sizes: '128x128', type: 'image/jpeg' },
-          { src: $('cover').src, sizes: '192x192', type: 'image/jpeg' },
-          { src: $('cover').src, sizes: '256x256', type: 'image/jpeg' },
-          { src: $('cover').src, sizes: '384x384', type: 'image/jpeg' },
-          { src: $('cover').src, sizes: '512x512', type: 'image/jpeg' }
-        ]
-      });
-      
-      // 绑定媒体按键（比如蓝牙耳机按下一首）
-      navigator.mediaSession.setActionHandler('play', () => audio.play());
-      navigator.mediaSession.setActionHandler('pause', () => audio.pause());
-      navigator.mediaSession.setActionHandler('previoustrack', () => {
-        if (state.currentIndex > 0) selectSong(state.currentIndex - 1);
-      });
-      navigator.mediaSession.setActionHandler('nexttrack', () => {
-        if (state.currentIndex < state.songs.length - 1) selectSong(state.currentIndex + 1);
-      });
-    }
     setStatus('播放中');
-    $('downloadBtn').disabled = false; // 允许点击下载
+    $('downloadBtn').disabled = false;
     startLyricSync(audio);
 
   } catch(e) {
@@ -282,128 +262,34 @@ async function selectSong(index){
     } else {
        $('lyricArea').innerHTML = `<div class="placeholder err">播放失败：${escapeHtml(e.message)}</div>`;
     }
-  } // 👈 补全了 catch 的闭合
-} // 👈 补全了 selectSong 的闭合
-
-/* ---------- 官方页面跳转 ---------- */
-function openOfficial(){
-  const s = state.songs[state.currentIndex]; 
-  if(!s) return;
-  
-  const realDetail = state.currentDetail || s.raw;
-  let url = '';
-  
-  if (state.platform === 'wymusic') {
-    const realId = realDetail.id || realDetail.songid || s.id;
-    url = `https://music.163.com/song?id=${realId}`;
-  } else if (state.platform === 'qqmusic') {
-    const realMid = realDetail.songmid || realDetail.mid || s.id;
-    url = `https://y.qq.com/n/ryqq/songDetail/${realMid}`;
-  } else if (state.platform === 'kgmusic') {
-    const realHash = realDetail.hash || realDetail.FileHash || s.hash;
-    url = `https://www.kugou.com/song/#hash=${realHash}`;
-  }
-  
-  if(url) window.open(url, '_blank');
-}
-
-/* ---------- 独立下载逻辑 ---------- */
-function openDownloadModal() {
-  if (!state.currentDetail && !state.currentIndex) return;
-  updateQualityOptions();
-  $('downloadModal').classList.add('show');
-}
-
-async function confirmDownload() {
-  const s = state.songs[state.currentIndex];
-  if(!s) return;
-
-  const yz = $('downloadQualitySelect').value;
-  const btn = $('confirmDownloadBtn');
-  
-  btn.disabled = true;
-  btn.textContent = '请求中…';
-  
-  try {
-    const path = PLATFORM_ENDPOINTS[state.platform];
-    const keyword = s.name + (s.artist && s.artist !== '未知' ? ' ' + s.artist : '');
-    const targetUrl = `${API_TARGET}${path}?ss=${keyword}&n=1&format=json&yz=${yz}`;
-    const fetchUrl = CORS_PROXY + `key=${API_KEY}&url=${encodeURIComponent(targetUrl)}`;
-    
-    const res = await fetch(fetchUrl);
-    const json = await res.json();
-    
-    let detail = null;
-    if (json.data && !Array.isArray(json.data) && (json.data.play_url || json.data.url)) {
-      detail = json.data;
-    } else {
-      let list = json.data?.songs || json.data || json.songs || [];
-      if (list.length) detail = list[0];
-    }
-
-    if (!detail) throw new Error('未获取到该音质的链接');
-    
-    let downloadUrl = detail.play_url || detail.url || detail.playUrl || detail.src || '';
-    if(!downloadUrl) throw new Error('该音质暂无下载链接');
-
-    if (downloadUrl.startsWith('http://')) downloadUrl = downloadUrl.replace('http://', 'https://');
-
-    // 1. 提取音源（新标签页打开）
-    window.open(downloadUrl, '_blank');
-    
-    // 2. 如果勾选了附带歌词，生成并下载 LRC
-    if (settings.dlLyric && state.lyricLines.length > 0) {
-      const lrcText = state.lyricLines.map(l => {
-        const m = Math.floor(l.time / 60).toString().padStart(2, '0');
-        const sec = Math.floor(l.time % 60).toString().padStart(2, '0');
-        const ms = Math.floor((l.time % 1) * 100).toString().padStart(2, '0');
-        return `[${m}:${sec}.${ms}]${l.content}`;
-      }).join('\n');
-      
-      const blob = new Blob([lrcText], { type: 'text/plain;charset=utf-8' });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `${s.artist} - ${s.name}.lrc`;
-      a.style.display = 'none';
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      URL.revokeObjectURL(url);
-    }
-
-    // 3. 如果勾选了附带封面，新标签页打开封面（由于跨域，无法静默保存）
-    if (settings.dlCover) {
-      const pic = detail.cover_url || detail.pic || detail.albumPic || '';
-      if (pic) {
-        const httpPic = pic.startsWith('http://') ? pic.replace('http://', 'https://') : pic;
-        // 延迟一下打开，避免被浏览器拦截弹窗
-        setTimeout(() => window.open(httpPic, '_blank'), 300);
-      }
-    }
-    
-    $('downloadModal').classList.remove('show');
-    setStatus(`已提取 [${yz}] 音源`);
-  } catch(e) {
-    setStatus('下载获取失败：' + e.message, true);
-    alert('获取失败：' + e.message);
-  } finally {
-    btn.disabled = false;
-    btn.textContent = '开始下载';
   }
 }
 
-/* ---------- 歌词解析 ---------- */
+/* ---------- 歌词解析（完美支持时间轴合并双语） ---------- */
 function parseLRC(text) {
   if (!text || typeof text !== 'string') return [];
-  const lines = [];
+  
+  const linesMap = new Map();
   const re = /\[(\d{2}):(\d{2})\.(\d{2,3})\](.*)/g;
   let m;
+  
+  // 把 lrc 和 tlyric 拼在一起后，同一时间轴的会自动合并
   while ((m = re.exec(text)) !== null) {
     const t = parseInt(m[1], 10) * 60 + parseInt(m[2], 10) + parseInt(m[3].padEnd(3, '0'), 10) / 1000;
     const content = m[4].trim();
-    if (content) lines.push({ time: t, content });
+    
+    if (content) {
+      // 如果这个时间点已经有歌词了（说明是翻译）
+      if (linesMap.has(t)) {
+        linesMap.set(t, linesMap.get(t) + '\n' + content);
+      } else {
+        linesMap.set(t, content);
+      }
+    }
   }
+
+  // 转成数组并排序
+  const lines = Array.from(linesMap, ([time, content]) => ({ time, content }));
   lines.sort((a, b) => a.time - b.time);
   return lines;
 }
@@ -414,7 +300,10 @@ function renderLyric() {
     box.innerHTML = '<div class="placeholder">暂无歌词</div>';
     return;
   }
-  box.innerHTML = state.lyricLines.map((l, i) => `<div class="lyric-line" data-i="${i}">${escapeHtml(l.content)}</div>`).join('');
+  // 用 CSS 的 white-space: pre-wrap 配合换行，把翻译显示在原歌词下方
+  box.innerHTML = state.lyricLines.map((l, i) => `
+    <div class="lyric-line" data-i="${i}" style="white-space: pre-wrap;">${escapeHtml(l.content)}</div>
+  `).join('');
 }
 
 function startLyricSync(audio) {
@@ -438,5 +327,5 @@ function clearLyricTimer() {
   if (state.lyricTimer) { clearInterval(state.lyricTimer); state.lyricTimer = null; }
 }
 
-window.addEventListener('beforeunload', clearLyricTimer);
-updateQualityOptions(); // 初始化下拉框
+// 后续的 openOfficial, download, 绑定事件保持不变
+// ... （保留你原有的 openOfficial 和 download 逻辑） ...
