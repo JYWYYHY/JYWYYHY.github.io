@@ -1,5 +1,5 @@
 window.BOOKMARKS = {
-  "generated": "2026-11-21",
+  "generated": "2026-11-22",
   "items": [
     {
       "id": "514d74bd-a3ff-40c7-89e9-445cecf23e18",
@@ -165,7 +165,7 @@ window.BOOKMARKS = {
     },
     {
       "id": "e5948b05-dbcb-4505-bf11-b2fb4f746402",
-      "title": "宇宙无敌超级霹雳新宿决战",
+      "title": "宇宙无敌超级霹雳咒术回战",
       "url": "https://www.bilibili.com/toy/3avpeuj9fIhdehr3/index.html",
       "path": [
         "游戏娱乐",
