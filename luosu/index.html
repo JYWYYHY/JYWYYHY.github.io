@@ -3,14 +3,14 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>洛苏音乐 · 网页版</title>
+<title>洛苏音乐 · 网页全功能版</title>
 <link rel="shortcut icon" href="./favicon.jpg">
 <link rel="stylesheet" href="style.css">
 </head>
 <body>
 
 <header>
-  <h1>洛苏音乐</h1>
+  <h1>🎵 洛苏点歌</h1>
   <div class="platform-tabs" id="platformTabs">
     <button data-platform="wymusic" class="active">网易云</button>
     <button data-platform="kgmusic">酷狗</button>
@@ -34,6 +34,8 @@
     </div>
     <div class="setting-item">
       <label>在线试听音质 (yz)</label>
+      <select id="setQuality"></select>
+    </div>
     <div class="setting-item" style="flex-direction: row; align-items: center; gap: 10px; margin-top: 10px;">
       <input type="checkbox" id="setDlCover" style="width: 16px; height: 16px; cursor: pointer;">
       <label for="setDlCover" style="cursor: pointer; margin: 0;">下载时附带封面图</label>
@@ -41,8 +43,6 @@
     <div class="setting-item" style="flex-direction: row; align-items: center; gap: 10px;">
       <input type="checkbox" id="setDlLyric" style="width: 16px; height: 16px; cursor: pointer;">
       <label for="setDlLyric" style="cursor: pointer; margin: 0;">下载时附带 LRC 歌词</label>
-    </div>
-      <select id="setQuality"></select>
     </div>
     <div class="modal-actions">
       <button onclick="saveSettings()">保存设置</button>
@@ -83,10 +83,10 @@
       <div class="info">
         <div class="name" id="nowName">未选择</div>
         <div class="artist" id="nowArtist">—</div>
+        <div class="album" id="nowAlbum" style="font-size: 0.85rem; color: var(--mist); opacity: 0.8; margin-top: 2px;">专辑：—</div>
         <audio id="audio" controls preload="none"></audio>
       </div>
       <div class="action-btns">
-        <!-- 文案已修改 -->
         <button class="icon-btn" onclick="openDownloadModal()" id="downloadBtn" disabled>下载</button>
         <button class="icon-btn" onclick="openOfficial()" id="officialBtn" disabled>官方页面</button>
       </div>
@@ -96,7 +96,7 @@
     </div>
     <div class="status-bar">
       <span id="status">就绪</span>
-      <span>Powered by corsproxy.io</span>
+      <span>Powered by Meting & 洛苏</span>
     </div>
   </section>
 </main>
